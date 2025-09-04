@@ -28,8 +28,8 @@
 //! use fiasto::internal::parser::Parser;
 //!
 //! let formula = "y ~ x + poly(x, 2) + (1 | group), family = gaussian";
-//! let mut parser = Parser::new(formula)?;
-//! let (response, terms, has_intercept, family) = parser.parse_formula()?;
+//! let mut parser = Parser::new(formula).unwrap();
+//! let (response, terms, has_intercept, family) = parser.parse_formula().unwrap();
 //! 
 //! // response = "y"
 //! // terms = [Term::Column("x"), Term::Function{...}, Term::RandomEffect{...}]
@@ -69,7 +69,7 @@ use crate::internal::{
 /// use fiasto::internal::parser::Parser;
 ///
 /// let formula = "y ~ x + z";
-/// let parser = Parser::new(formula)?;
+/// let parser = Parser::new(formula).unwrap();
 /// // parser.input = "y ~ x + z"
 /// // parser.tokens = [(ColumnName, "y"), (Tilde, "~"), ...]
 /// // parser.pos = 0
@@ -102,13 +102,13 @@ impl<'a> Parser<'a> {
     /// * `Err(ParseError)` - Lexical analysis failed
     ///
     /// # Examples
-    ///
-    /// ```rust
-    /// use fiasto::internal::parser::Parser;
-    ///
-    /// let formula = "y ~ x + z";
-    /// let parser = Parser::new(formula)?;
-    /// ```
+///
+/// ```rust
+/// use fiasto::internal::parser::Parser;
+///
+/// let formula = "y ~ x + z";
+/// let parser = Parser::new(formula).unwrap();
+/// ```
     pub fn new(input: &'a str) -> Result<Self, ParseError> {
         crate::internal::new::new(input)
     }
@@ -127,18 +127,18 @@ impl<'a> Parser<'a> {
     /// * `Option<Family>` - The distribution family (if specified)
     ///
     /// # Examples
-    ///
-    /// ```rust
-    /// use fiasto::internal::parser::Parser;
-    ///
-    /// let formula = "y ~ x + (1 | group), family = gaussian";
-    /// let mut parser = Parser::new(formula)?;
-    /// let (response, terms, has_intercept, family) = parser.parse_formula()?;
-    /// 
-    /// assert_eq!(response, "y");
-    /// assert!(has_intercept);
-    /// assert!(family.is_some());
-    /// ```
+///
+/// ```rust
+/// use fiasto::internal::parser::Parser;
+///
+/// let formula = "y ~ x + (1 | group), family = gaussian";
+/// let mut parser = Parser::new(formula).unwrap();
+/// let (response, terms, has_intercept, family) = parser.parse_formula().unwrap();
+/// 
+/// assert_eq!(response, "y");
+/// assert!(has_intercept);
+/// assert!(family.is_some());
+/// ```
     pub fn parse_formula(
         &mut self,
     ) -> Result<(String, Vec<Term>, bool, Option<Family>), ParseError> {
