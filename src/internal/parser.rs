@@ -1,33 +1,144 @@
+//! # Parser for Statistical Formulas
+//!
+//! This module provides the main parser for statistical formulas. The parser takes
+//! a formula string, tokenizes it, and converts it into an Abstract Syntax Tree (AST)
+//! that can be processed to generate metadata.
+//!
+//! ## Overview
+//!
+//! The parser is designed to handle the complete range of R-style statistical formula
+//! syntax, including:
+//!
+//! - Basic linear models: `y ~ x + z`
+//! - Transformations: `y ~ poly(x, 3) + log(z)`
+//! - Interactions: `y ~ x:z + x*z`
+//! - Random effects: `y ~ x + (1 | group) + (x || group)`
+//! - Complex grouping: `y ~ x + (x | gr(group, cor=FALSE))`
+//! - Family specification: `y ~ x, family = gaussian`
+//!
+//! ## Architecture
+//!
+//! The parser uses a two-phase approach:
+//! 1. **Lexical Analysis**: Converts the input string into tokens
+//! 2. **Syntactic Analysis**: Converts tokens into an AST
+//!
+//! ## Example Usage
+//!
+//! ```rust
+//! use fiasto::internal::parser::Parser;
+//!
+//! let formula = "y ~ x + poly(x, 2) + (1 | group), family = gaussian";
+//! let mut parser = Parser::new(formula)?;
+//! let (response, terms, has_intercept, family) = parser.parse_formula()?;
+//! 
+//! // response = "y"
+//! // terms = [Term::Column("x"), Term::Function{...}, Term::RandomEffect{...}]
+//! // has_intercept = true
+//! // family = Some(Family::Gaussian)
+//! ```
+//!
+//! ## Error Handling
+//!
+//! The parser provides detailed error messages for common issues:
+//! - Invalid syntax
+//! - Unrecognized functions
+//! - Malformed random effects
+//! - Missing required arguments
+
 use crate::internal::{
     ast::{Family, Term},
     errors::ParseError,
     lexer::Token,
 };
 
-// ---------------------------
-// PARSER
-// ---------------------------
-
-/// Parser for the formula
-/// This is responsible for parsing the formula string into an AST
-/// The <'a> means that the parser will borrow the input string for the duration of its lifetime
-/// The `input` field is a reference to the original input string
-/// The `tokens` field is a vector of all the tokens found in the input string
-/// The `pos` field is the current position in the token stream
+/// Parser for statistical formulas
+///
+/// The parser converts formula strings into Abstract Syntax Trees (ASTs).
+/// It uses a lifetime parameter `'a` to borrow the input string, ensuring
+/// that the parser doesn't outlive the input data.
+///
+/// # Fields
+///
+/// * `input` - Reference to the original formula string
+/// * `tokens` - Vector of tokens with their string slices
+/// * `pos` - Current position in the token stream
+///
+/// # Examples
+///
+/// ```rust
+/// use fiasto::internal::parser::Parser;
+///
+/// let formula = "y ~ x + z";
+/// let parser = Parser::new(formula)?;
+/// // parser.input = "y ~ x + z"
+/// // parser.tokens = [(ColumnName, "y"), (Tilde, "~"), ...]
+/// // parser.pos = 0
+/// ```
 pub struct Parser<'a> {
+    /// Reference to the original input string
     pub input: &'a str,
+    
+    /// Vector of tokens with their string slices from the input
     pub tokens: Vec<(Token, &'a str)>,
+    
+    /// Current position in the token stream
     pub pos: usize,
 }
 
-/// The parser implementation does the actual work of parsing the formula
+/// Implementation of the parser functionality
 impl<'a> Parser<'a> {
-    /// Creates a new parser instance
+    /// Creates a new parser instance from a formula string
+    ///
+    /// This method tokenizes the input string and creates a parser ready to
+    /// parse the formula into an AST.
+    ///
+    /// # Arguments
+    ///
+    /// * `input` - The formula string to parse
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(Parser)` - Successfully created parser
+    /// * `Err(ParseError)` - Lexical analysis failed
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use fiasto::internal::parser::Parser;
+    ///
+    /// let formula = "y ~ x + z";
+    /// let parser = Parser::new(formula)?;
+    /// ```
     pub fn new(input: &'a str) -> Result<Self, ParseError> {
         crate::internal::new::new(input)
     }
 
-    /// Parses the formula and returns the response, terms, intercept flag, and family
+    /// Parses the formula and returns the complete AST information
+    ///
+    /// This method performs the syntactic analysis of the tokenized formula
+    /// and returns the parsed components.
+    ///
+    /// # Returns
+    ///
+    /// A tuple containing:
+    /// * `String` - The response variable name
+    /// * `Vec<Term>` - All terms in the formula (fixed effects, random effects, etc.)
+    /// * `bool` - Whether the model includes an intercept
+    /// * `Option<Family>` - The distribution family (if specified)
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use fiasto::internal::parser::Parser;
+    ///
+    /// let formula = "y ~ x + (1 | group), family = gaussian";
+    /// let mut parser = Parser::new(formula)?;
+    /// let (response, terms, has_intercept, family) = parser.parse_formula()?;
+    /// 
+    /// assert_eq!(response, "y");
+    /// assert!(has_intercept);
+    /// assert!(family.is_some());
+    /// ```
     pub fn parse_formula(
         &mut self,
     ) -> Result<(String, Vec<Term>, bool, Option<Family>), ParseError> {

@@ -349,7 +349,7 @@ fn parse_gr_option<'a>(
 
     match tok {
         Token::Cor => {
-            let (value_tok, value_str) = crate::internal::expect::expect(
+            let (value_tok, _value_str) = crate::internal::expect::expect(
                 tokens,
                 pos,
                 |t| {
@@ -392,7 +392,7 @@ fn parse_gr_option<'a>(
             Ok(GrOption::By(by_value))
         }
         Token::Cov => {
-            let (value_tok, value_str) = crate::internal::expect::expect(
+            let (value_tok, _value_str) = crate::internal::expect::expect(
                 tokens,
                 pos,
                 |t| {

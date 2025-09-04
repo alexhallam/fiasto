@@ -1,3 +1,97 @@
+//! # MetaBuilder: Variable-Centric Formula Metadata Construction
+//!
+//! The MetaBuilder is responsible for constructing comprehensive metadata from parsed
+//! formula AST nodes. It uses a variable-centric approach where each variable is
+//! tracked as a first-class citizen with detailed information about its roles,
+//! transformations, interactions, and random effects.
+//!
+//! ## Overview
+//!
+//! The MetaBuilder processes AST nodes and builds a structured metadata representation
+//! that makes it easy to understand the complete model structure. It handles:
+//!
+//! - **Variable Management**: Assigns unique IDs and tracks all variables
+//! - **Role Assignment**: Determines what role each variable plays (Response, FixedEffect, etc.)
+//! - **Transformation Tracking**: Records all transformations and their generated columns
+//! - **Interaction Detection**: Identifies and documents variable interactions
+//! - **Random Effects Processing**: Handles complex random effects structures
+//! - **Metadata Generation**: Creates the final variable-centric output structure
+//!
+//! ## Key Features
+//!
+//! - **Variable-Centric Design**: Variables are the primary entities with comprehensive attributes
+//! - **ID Management**: Response variable always gets ID 1, others start from ID 2
+//! - **Generated Columns**: Tracks all columns that will be created for the model
+//! - **Role Flexibility**: Variables can have multiple roles (e.g., both FixedEffect and RandomEffect)
+//! - **Transformation Support**: Handles complex transformations with parameter tracking
+//! - **Random Effects**: Supports all brms-style random effects syntax
+//!
+//! ## Example Usage
+//!
+//! ```rust
+//! use fiasto::internal::meta_builder::MetaBuilder;
+//! use fiasto::internal::ast::{Term, Argument, RandomEffect, Grouping, CorrelationType};
+//!
+//! let mut builder = MetaBuilder::new();
+//!
+//! // Add response variable
+//! builder.push_response("y");
+//!
+//! // Add fixed effect
+//! builder.push_plain_term("x");
+//!
+//! // Add transformation
+//! builder.push_function_term("poly", &[Argument::Ident("x".to_string()), Argument::Integer(2)]);
+//!
+//! // Add random effect
+//! let random_effect = RandomEffect {
+//!     terms: vec![],
+//!     grouping: Grouping::Simple("group".to_string()),
+//!     correlation: CorrelationType::Correlated,
+//!     correlation_id: None
+//! };
+//! builder.push_random_effect(&random_effect);
+//!
+//! // Build final metadata
+//! let metadata = builder.build("y ~ x + poly(x, 2) + (1 | group)", true, Some("gaussian".to_string()));
+//! ```
+//!
+//! ## Output Structure
+//!
+//! The MetaBuilder produces a variable-centric JSON structure where each variable
+//! contains comprehensive information about its role in the model:
+//!
+//! ```json
+//! {
+//!   "formula": "y ~ x + poly(x, 2) + (1 | group), family = gaussian",
+//!   "metadata": {
+//!     "has_intercept": true,
+//!     "is_random_effects_model": true,
+//!     "has_uncorrelated_slopes_and_intercepts": false,
+//!     "family": "gaussian"
+//!   },
+//!   "all_generated_columns": ["y", "x", "x_poly_1", "x_poly_2", "group"],
+//!   "columns": {
+//!     "y": {
+//!       "id": 1,
+//!       "roles": ["Response"],
+//!       "generated_columns": ["y"],
+//!       "transformations": [],
+//!       "interactions": [],
+//!       "random_effects": []
+//!     },
+//!     "x": {
+//!       "id": 2,
+//!       "roles": ["FixedEffect"],
+//!       "generated_columns": ["x_poly_1", "x_poly_2"],
+//!       "transformations": [...],
+//!       "interactions": [],
+//!       "random_effects": []
+//!     }
+//!   }
+//! }
+//! ```
+
 use super::{
     ast::{Argument, Grouping, RandomEffect, RandomTerm},
     data_structures::{
@@ -7,29 +101,78 @@ use super::{
 };
 use std::collections::HashMap;
 
-// ---------------------------
-// META BUILDER
-// ---------------------------
-
+/// The MetaBuilder constructs variable-centric formula metadata
+///
+/// This struct is responsible for building comprehensive metadata from parsed
+/// formula AST nodes. It uses a variable-centric approach where each variable
+/// is tracked with detailed information about its roles, transformations,
+/// interactions, and random effects.
+///
+/// # Examples
+///
+/// ```rust
+/// use fiasto::internal::meta_builder::MetaBuilder;
+///
+/// let mut builder = MetaBuilder::new();
+/// builder.push_response("y");
+/// builder.push_plain_term("x");
+/// let metadata = builder.build("y ~ x", true, None);
+/// ```
 #[derive(Default)]
-/// The MetaBuilder is responsible for building the formula metadata
-/// Uses a variable-centric approach where each variable is tracked with its roles,
-/// transformations, interactions, and random effects
 pub struct MetaBuilder {
+    /// Maps variable names to their unique IDs
+    /// 
+    /// # Examples
+    /// - `"y"` → `1` (response always gets ID 1)
+    /// - `"x"` → `2` (first predictor gets ID 2)
+    /// - `"group"` → `3` (grouping variable gets ID 3)
     name_to_id: HashMap<String, u32>,
+    
+    /// Maps variable names to their complete information
+    /// 
+    /// Contains all variables with their roles, transformations,
+    /// interactions, and random effects information.
     columns: HashMap<String, VariableInfo>,
-    has_intercept: bool,
+    
+    /// Whether the model uses uncorrelated random slopes and intercepts (|| syntax)
+    /// 
+    /// # Examples
+    /// - `true` for `(x || group)` (uncorrelated effects)
+    /// - `false` for `(x | group)` (correlated effects)
     has_uncorrelated_slopes_and_intercepts: bool,
+    
+    /// Whether the model includes any random effects
+    /// 
+    /// # Examples
+    /// - `true` for `y ~ x + (1 | group)`
+    /// - `false` for `y ~ x + z`
     is_random_effects_model: bool,
+    
+    /// The next available ID for new variables
+    /// 
+    /// Starts at 2 (since response gets ID 1) and increments
+    /// for each new variable added.
     next_id: u32,
 }
 
 impl MetaBuilder {
+    /// Creates a new MetaBuilder instance
+    ///
+    /// Initializes the builder with empty collections and default values.
+    /// The next_id starts at 1, but the response variable will be assigned ID 1,
+    /// so other variables will start from ID 2.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use fiasto::internal::meta_builder::MetaBuilder;
+    ///
+    /// let builder = MetaBuilder::new();
+    /// ```
     pub fn new() -> Self {
         Self {
             name_to_id: HashMap::new(),
             columns: HashMap::new(),
-            has_intercept: true,
             has_uncorrelated_slopes_and_intercepts: false,
             is_random_effects_model: false,
             next_id: 1,
@@ -60,6 +203,25 @@ impl MetaBuilder {
     }
 
     /// Adds a role to a variable
+    ///
+    /// Adds a new role to the variable if it doesn't already have that role.
+    /// Variables can have multiple roles (e.g., both FixedEffect and RandomEffect).
+    ///
+    /// # Arguments
+    ///
+    /// * `name` - The name of the variable
+    /// * `role` - The role to add to the variable
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use fiasto::internal::meta_builder::MetaBuilder;
+    /// use fiasto::internal::data_structures::VariableRole;
+    ///
+    /// let mut builder = MetaBuilder::new();
+    /// builder.ensure_variable("x");
+    /// builder.add_role("x", VariableRole::FixedEffect);
+    /// ```
     pub fn add_role(&mut self, name: &str, role: VariableRole) {
         if let Some(var_info) = self.columns.get_mut(name) {
             if !var_info.roles.contains(&role) {
@@ -92,6 +254,24 @@ impl MetaBuilder {
     }
 
     /// Adds a response variable (always gets ID 1)
+    ///
+    /// The response variable is always assigned ID 1, and all other variables
+    /// will be assigned IDs starting from 2. This ensures consistent ordering
+    /// in the output metadata.
+    ///
+    /// # Arguments
+    ///
+    /// * `name` - The name of the response variable
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use fiasto::internal::meta_builder::MetaBuilder;
+    ///
+    /// let mut builder = MetaBuilder::new();
+    /// builder.push_response("y");
+    /// // y will have ID 1 and role Response
+    /// ```
     pub fn push_response(&mut self, name: &str) {
         // Ensure response variable gets ID 1
         if !self.name_to_id.contains_key(name) {
@@ -114,6 +294,24 @@ impl MetaBuilder {
     }
 
     /// Adds a fixed effect variable
+    ///
+    /// Adds a simple variable as a fixed effect in the model.
+    /// The variable will be assigned the next available ID and
+    /// given the FixedEffect role.
+    ///
+    /// # Arguments
+    ///
+    /// * `name` - The name of the variable to add as a fixed effect
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use fiasto::internal::meta_builder::MetaBuilder;
+    ///
+    /// let mut builder = MetaBuilder::new();
+    /// builder.push_plain_term("x");
+    /// // x will be added as a fixed effect
+    /// ```
     pub fn push_plain_term(&mut self, name: &str) {
         self.ensure_variable(name);
         self.add_role(name, VariableRole::FixedEffect);
@@ -171,14 +369,17 @@ impl MetaBuilder {
     fn extract_variable_name(&self, term: &crate::internal::ast::Term) -> Option<String> {
         match term {
             crate::internal::ast::Term::Column(name) => Some(name.clone()),
-            crate::internal::ast::Term::Function { name, args } => {
+            crate::internal::ast::Term::Function { name: _name, args } => {
                 // For functions, extract the first argument if it's an identifier
                 args.iter().find_map(|arg| match arg {
                     Argument::Ident(s) => Some(s.clone()),
                     _ => None,
                 })
             }
-            crate::internal::ast::Term::Interaction { left, right } => {
+            crate::internal::ast::Term::Interaction {
+                left,
+                right: _right,
+            } => {
                 // For nested interactions, we'll use the left side for now
                 self.extract_variable_name(left)
             }
@@ -418,7 +619,36 @@ impl MetaBuilder {
         }
     }
 
-    /// Builds the final FormulaMetaData
+    /// Builds the final FormulaMetaData structure
+    ///
+    /// This method consumes the MetaBuilder and creates the final metadata structure
+    /// that contains all information about the parsed formula. It generates the
+    /// `all_generated_columns` array ordered by variable ID and creates the complete
+    /// variable-centric metadata structure.
+    ///
+    /// # Arguments
+    ///
+    /// * `self` - Consumes the MetaBuilder
+    /// * `input` - The original formula string
+    /// * `has_intercept` - Whether the model includes an intercept
+    /// * `family` - The distribution family (if specified)
+    ///
+    /// # Returns
+    ///
+    /// A complete `FormulaMetaData` structure with all variable information
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use fiasto::internal::meta_builder::MetaBuilder;
+    ///
+    /// let mut builder = MetaBuilder::new();
+    /// builder.push_response("y");
+    /// builder.push_plain_term("x");
+    /// 
+    /// let metadata = builder.build("y ~ x", true, Some("gaussian".to_string()));
+    /// // metadata contains complete variable-centric information
+    /// ```
     pub fn build(
         self,
         input: &str,
