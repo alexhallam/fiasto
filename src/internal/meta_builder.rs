@@ -101,20 +101,24 @@ impl MetaBuilder {
     }
 
     /// Adds an interaction term
-    pub fn push_interaction(&mut self, left: &crate::internal::ast::Term, right: &crate::internal::ast::Term) {
+    pub fn push_interaction(
+        &mut self,
+        left: &crate::internal::ast::Term,
+        right: &crate::internal::ast::Term,
+    ) {
         // Extract variable names from the interaction terms
         let left_name = self.extract_variable_name(left);
         let right_name = self.extract_variable_name(right);
-        
+
         if let (Some(left_var), Some(right_var)) = (left_name, right_name) {
             // Ensure both variables exist
             self.ensure_variable(&left_var);
             self.ensure_variable(&right_var);
-            
+
             // Add fixed effect role to both variables
             self.add_role(&left_var, VariableRole::FixedEffect);
             self.add_role(&right_var, VariableRole::FixedEffect);
-            
+
             // Add interaction info to both variables
             let interaction = Interaction {
                 with: vec![right_var.clone()],
@@ -123,7 +127,7 @@ impl MetaBuilder {
                 grouping_variable: None,
             };
             self.add_interaction(&left_var, interaction);
-            
+
             let interaction = Interaction {
                 with: vec![left_var.clone()],
                 order: 2,
