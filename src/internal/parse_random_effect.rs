@@ -44,7 +44,9 @@ fn parse_random_terms<'a>(
         // Check if followed by + or -
         if crate::internal::matches::matches(tokens, pos, |t| matches!(t, Token::Plus)) {
             // Parse additional terms
-            while !crate::internal::matches::matches(tokens, pos, |t| matches!(t, Token::Pipe | Token::DoublePipe)) {
+            while !crate::internal::matches::matches(tokens, pos, |t| {
+                matches!(t, Token::Pipe | Token::DoublePipe)
+            }) {
                 terms.push(parse_random_term(tokens, pos)?);
                 if !crate::internal::matches::matches(tokens, pos, |t| matches!(t, Token::Plus)) {
                     break;
@@ -58,7 +60,9 @@ fn parse_random_terms<'a>(
         // Check if followed by + (random slopes only)
         if crate::internal::matches::matches(tokens, pos, |t| matches!(t, Token::Plus)) {
             // Parse additional terms (no intercept)
-            while !crate::internal::matches::matches(tokens, pos, |t| matches!(t, Token::Pipe | Token::DoublePipe)) {
+            while !crate::internal::matches::matches(tokens, pos, |t| {
+                matches!(t, Token::Pipe | Token::DoublePipe)
+            }) {
                 terms.push(parse_random_term(tokens, pos)?);
                 if !crate::internal::matches::matches(tokens, pos, |t| matches!(t, Token::Plus)) {
                     break;
@@ -67,19 +71,24 @@ fn parse_random_terms<'a>(
         } else {
             // Just zero (no intercept) - but this should not happen in valid syntax
             // Zero should always be followed by + in random effects
-            return Err(ParseError::Syntax("expected '+' after '0' in random effects".into()));
+            return Err(ParseError::Syntax(
+                "expected '+' after '0' in random effects".into(),
+            ));
         }
     } else if crate::internal::matches::matches(tokens, pos, |t| matches!(t, Token::Minus)) {
         // Check for -1 or -0 (intercept suppression)
-        if crate::internal::matches::matches(tokens, pos, |t| matches!(t, Token::One | Token::Zero)) {
+        if crate::internal::matches::matches(tokens, pos, |t| matches!(t, Token::One | Token::Zero))
+        {
             terms.push(RandomTerm::SuppressIntercept);
         } else {
-            return Err(ParseError::Syntax("expected '1' or '0' after '-' for intercept suppression".into()));
+            return Err(ParseError::Syntax(
+                "expected '1' or '0' after '-' for intercept suppression".into(),
+            ));
         }
     } else {
         // Parse first term
         terms.push(parse_random_term(tokens, pos)?);
-        
+
         // Parse additional terms
         while crate::internal::matches::matches(tokens, pos, |t| matches!(t, Token::Plus)) {
             terms.push(parse_random_term(tokens, pos)?);
@@ -97,14 +106,21 @@ fn parse_random_term<'a>(
     let (tok, name_slice) = crate::internal::expect::expect(
         tokens,
         pos,
-        |t| matches!(t, Token::ColumnName | Token::FunctionStart | Token::Cs | Token::Mmc),
+        |t| {
+            matches!(
+                t,
+                Token::ColumnName | Token::FunctionStart | Token::Cs | Token::Mmc
+            )
+        },
         "ColumnName, FunctionStart, cs, or mmc",
     )?;
 
     match tok {
         Token::ColumnName => {
             // Check if this is followed by an interaction
-            if crate::internal::matches::matches(tokens, pos, |t| matches!(t, Token::InteractionOnly | Token::InteractionAndEffect)) {
+            if crate::internal::matches::matches(tokens, pos, |t| {
+                matches!(t, Token::InteractionOnly | Token::InteractionAndEffect)
+            }) {
                 let right_term = parse_random_term(tokens, pos)?;
                 Ok(RandomTerm::Interaction {
                     left: Box::new(RandomTerm::Column(name_slice.to_string())),
@@ -116,12 +132,19 @@ fn parse_random_term<'a>(
         }
         Token::FunctionStart => {
             // This should be handled by the main parser, not here
-            Err(ParseError::Syntax("unexpected function start in random term".into()))
+            Err(ParseError::Syntax(
+                "unexpected function start in random term".into(),
+            ))
         }
         Token::Cs => {
             // Parse cs() function
-            crate::internal::expect::expect(tokens, pos, |t| matches!(t, Token::FunctionStart), "(")?;
-            
+            crate::internal::expect::expect(
+                tokens,
+                pos,
+                |t| matches!(t, Token::FunctionStart),
+                "(",
+            )?;
+
             // Parse the argument (can be 1, 0, or a column name)
             let (arg_tok, arg_str) = crate::internal::expect::expect(
                 tokens,
@@ -129,13 +152,13 @@ fn parse_random_term<'a>(
                 |t| matches!(t, Token::One | Token::Zero | Token::ColumnName),
                 "1, 0, or ColumnName",
             )?;
-            
+
             let arg = match arg_tok {
                 Token::One => crate::internal::ast::Argument::Integer(1),
                 Token::Zero => crate::internal::ast::Argument::Integer(0),
                 _ => crate::internal::ast::Argument::Ident(arg_str.to_string()),
             };
-            
+
             crate::internal::expect::expect(tokens, pos, |t| matches!(t, Token::FunctionEnd), ")")?;
             Ok(RandomTerm::Function {
                 name: "cs".to_string(),
@@ -144,9 +167,14 @@ fn parse_random_term<'a>(
         }
         Token::Mmc => {
             // Parse mmc() function
-            crate::internal::expect::expect(tokens, pos, |t| matches!(t, Token::FunctionStart), "(")?;
+            crate::internal::expect::expect(
+                tokens,
+                pos,
+                |t| matches!(t, Token::FunctionStart),
+                "(",
+            )?;
             let mut args = Vec::new();
-            
+
             // Parse first argument
             let (_, arg_name) = crate::internal::expect::expect(
                 tokens,
@@ -155,7 +183,7 @@ fn parse_random_term<'a>(
                 "ColumnName",
             )?;
             args.push(crate::internal::ast::Argument::Ident(arg_name.to_string()));
-            
+
             // Parse additional arguments
             while crate::internal::matches::matches(tokens, pos, |t| matches!(t, Token::Comma)) {
                 let (_, arg_name) = crate::internal::expect::expect(
@@ -166,7 +194,7 @@ fn parse_random_term<'a>(
                 )?;
                 args.push(crate::internal::ast::Argument::Ident(arg_name.to_string()));
             }
-            
+
             crate::internal::expect::expect(tokens, pos, |t| matches!(t, Token::FunctionEnd), ")")?;
             Ok(RandomTerm::Function {
                 name: "mmc".to_string(),
@@ -192,9 +220,14 @@ fn parse_correlation_type<'a>(
         if let Some((Token::Integer, id_slice)) = tokens.get(*pos) {
             *pos += 1;
             if crate::internal::matches::matches(tokens, pos, |t| matches!(t, Token::Pipe)) {
-                Ok((CorrelationType::CrossParameter(id_slice.to_string()), Some(id_slice.to_string())))
+                Ok((
+                    CorrelationType::CrossParameter(id_slice.to_string()),
+                    Some(id_slice.to_string()),
+                ))
             } else {
-                return Err(ParseError::Syntax("expected second '|' after correlation ID".into()));
+                return Err(ParseError::Syntax(
+                    "expected second '|' after correlation ID".into(),
+                ));
             }
         } else {
             Ok((CorrelationType::Correlated, None))
@@ -222,7 +255,9 @@ fn parse_grouping<'a>(
     match tok {
         Token::ColumnName => {
             // Check for nested or interaction grouping
-            if crate::internal::matches::matches(tokens, pos, |t| matches!(t, Token::InteractionOnly)) {
+            if crate::internal::matches::matches(tokens, pos, |t| {
+                matches!(t, Token::InteractionOnly)
+            }) {
                 let (_, right_name) = crate::internal::expect::expect(
                     tokens,
                     pos,
@@ -233,7 +268,8 @@ fn parse_grouping<'a>(
                     left: name_slice.to_string(),
                     right: right_name.to_string(),
                 })
-            } else if crate::internal::matches::matches(tokens, pos, |t| matches!(t, Token::Slash)) {
+            } else if crate::internal::matches::matches(tokens, pos, |t| matches!(t, Token::Slash))
+            {
                 let (_, right_name) = crate::internal::expect::expect(
                     tokens,
                     pos,
@@ -248,12 +284,8 @@ fn parse_grouping<'a>(
                 Ok(Grouping::Simple(name_slice.to_string()))
             }
         }
-        Token::Gr => {
-            parse_gr_grouping(tokens, pos, name_slice)
-        }
-        Token::Mm => {
-            parse_mm_grouping(tokens, pos)
-        }
+        Token::Gr => parse_gr_grouping(tokens, pos, name_slice),
+        Token::Mm => parse_mm_grouping(tokens, pos),
         _ => Err(ParseError::Unexpected {
             expected: "grouping",
             found: Some(tok),
@@ -268,7 +300,7 @@ fn parse_gr_grouping<'a>(
     _name_slice: &'a str,
 ) -> Result<Grouping, ParseError> {
     crate::internal::expect::expect(tokens, pos, |t| matches!(t, Token::FunctionStart), "(")?;
-    
+
     let (_, group_name) = crate::internal::expect::expect(
         tokens,
         pos,
@@ -277,7 +309,7 @@ fn parse_gr_grouping<'a>(
     )?;
 
     let mut options = Vec::new();
-    
+
     // Parse options if present
     if crate::internal::matches::matches(tokens, pos, |t| matches!(t, Token::Comma)) {
         while !crate::internal::matches::matches(tokens, pos, |t| matches!(t, Token::FunctionEnd)) {
@@ -304,7 +336,12 @@ fn parse_gr_option<'a>(
     let (tok, _name_slice) = crate::internal::expect::expect(
         tokens,
         pos,
-        |t| matches!(t, Token::Cor | Token::Id | Token::By | Token::Cov | Token::Dist),
+        |t| {
+            matches!(
+                t,
+                Token::Cor | Token::Id | Token::By | Token::Cov | Token::Dist
+            )
+        },
         "gr option",
     )?;
 
@@ -312,13 +349,21 @@ fn parse_gr_option<'a>(
 
     match tok {
         Token::Cor => {
-            let (_, value) = crate::internal::expect::expect(
+            let (value_tok, value_str) = crate::internal::expect::expect(
                 tokens,
                 pos,
-                |t| matches!(t, Token::True | Token::False),
+                |t| {
+                    matches!(
+                        t,
+                        Token::True | Token::TrueUpper | Token::False | Token::FalseUpper
+                    )
+                },
                 "true or false",
             )?;
-            Ok(GrOption::Cor(matches!(value, "true")))
+            Ok(GrOption::Cor(matches!(
+                value_tok,
+                Token::True | Token::TrueUpper
+            )))
         }
         Token::Id => {
             let (value_tok, value_str) = crate::internal::expect::expect(
@@ -334,22 +379,34 @@ fn parse_gr_option<'a>(
             Ok(GrOption::Id(id_value))
         }
         Token::By => {
-            let (_, value) = crate::internal::expect::expect(
+            let (value_tok, value_str) = crate::internal::expect::expect(
                 tokens,
                 pos,
-                |t| matches!(t, Token::ColumnName),
-                "by variable",
+                |t| matches!(t, Token::ColumnName | Token::Null | Token::NullUpper),
+                "by variable or NULL",
             )?;
-            Ok(GrOption::By(value.to_string()))
+            let by_value = match value_tok {
+                Token::Null | Token::NullUpper => None,
+                _ => Some(value_str.to_string()),
+            };
+            Ok(GrOption::By(by_value))
         }
         Token::Cov => {
-            let (_, value) = crate::internal::expect::expect(
+            let (value_tok, value_str) = crate::internal::expect::expect(
                 tokens,
                 pos,
-                |t| matches!(t, Token::ColumnName),
-                "covariance matrix",
+                |t| {
+                    matches!(
+                        t,
+                        Token::True | Token::TrueUpper | Token::False | Token::FalseUpper
+                    )
+                },
+                "true or false",
             )?;
-            Ok(GrOption::Cov(value.to_string()))
+            Ok(GrOption::Cov(matches!(
+                value_tok,
+                Token::True | Token::TrueUpper
+            )))
         }
         Token::Dist => {
             let (value_tok, value_str) = crate::internal::expect::expect(
@@ -377,9 +434,9 @@ fn parse_mm_grouping<'a>(
     pos: &mut usize,
 ) -> Result<Grouping, ParseError> {
     crate::internal::expect::expect(tokens, pos, |t| matches!(t, Token::FunctionStart), "(")?;
-    
+
     let mut groups = Vec::new();
-    
+
     // Parse first group
     let (_, group_name) = crate::internal::expect::expect(
         tokens,
@@ -427,7 +484,10 @@ mod tests {
         assert_eq!(random_effect.terms.len(), 1);
         assert!(matches!(random_effect.terms[0], RandomTerm::Column(ref name) if name == "1"));
         assert!(matches!(random_effect.grouping, Grouping::Simple(ref name) if name == "group"));
-        assert!(matches!(random_effect.correlation, CorrelationType::Correlated));
+        assert!(matches!(
+            random_effect.correlation,
+            CorrelationType::Correlated
+        ));
     }
 
     #[test]
@@ -446,7 +506,10 @@ mod tests {
         let random_effect = result.unwrap();
         assert_eq!(random_effect.terms.len(), 1);
         assert!(matches!(random_effect.terms[0], RandomTerm::Column(ref name) if name == "x"));
-        assert!(matches!(random_effect.correlation, CorrelationType::Uncorrelated));
+        assert!(matches!(
+            random_effect.correlation,
+            CorrelationType::Uncorrelated
+        ));
     }
 
     #[test]
@@ -470,6 +533,8 @@ mod tests {
         let result = parse_random_effect(&tokens, &mut pos);
         assert!(result.is_ok());
         let random_effect = result.unwrap();
-        assert!(matches!(random_effect.grouping, Grouping::Gr { ref group, ref options } if group == "group" && options.len() == 1));
+        assert!(
+            matches!(random_effect.grouping, Grouping::Gr { ref group, ref options } if group == "group" && options.len() == 1)
+        );
     }
 }

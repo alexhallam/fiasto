@@ -35,26 +35,43 @@ pub struct RandomEffect {
 #[derive(Debug, Clone)]
 pub enum RandomTerm {
     Column(String),
-    Function { name: String, args: Vec<Argument> },
-    Interaction { left: Box<RandomTerm>, right: Box<RandomTerm> },
+    Function {
+        name: String,
+        args: Vec<Argument>,
+    },
+    Interaction {
+        left: Box<RandomTerm>,
+        right: Box<RandomTerm>,
+    },
     SuppressIntercept,
 }
 
 #[derive(Debug, Clone)]
 pub enum Grouping {
     Simple(String),
-    Gr { group: String, options: Vec<GrOption> },
-    Mm { groups: Vec<String> },
-    Interaction { left: String, right: String },
-    Nested { outer: String, inner: String },
+    Gr {
+        group: String,
+        options: Vec<GrOption>,
+    },
+    Mm {
+        groups: Vec<String>,
+    },
+    Interaction {
+        left: String,
+        right: String,
+    },
+    Nested {
+        outer: String,
+        inner: String,
+    },
 }
 
 #[derive(Debug, Clone)]
 pub enum GrOption {
     Cor(bool),
     Id(String),
-    By(String),
-    Cov(String),
+    By(Option<String>), // Can be NULL
+    Cov(bool),          // Can be TRUE/FALSE
     Dist(String),
 }
 

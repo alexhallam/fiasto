@@ -16,11 +16,25 @@ pub enum Token {
     #[regex(r"[2-9]\d*")]
     Integer,
 
-    #[regex(r"[a-zA-Z][a-zA-Z0-9_]*")]
-    ColumnName,
-
     #[regex(r#""[^"]*""#)]
     StringLiteral,
+
+    // Specific tokens that could be confused with ColumnName must come before the regex
+    #[token("true")]
+    True,
+    #[token("TRUE")]
+    TrueUpper,
+    #[token("false")]
+    False,
+    #[token("FALSE")]
+    FalseUpper,
+    #[token("null")]
+    Null,
+    #[token("NULL")]
+    NullUpper,
+
+    #[regex(r"[a-zA-Z][a-zA-Z0-9_]*")]
+    ColumnName,
 
     #[token("~")]
     Tilde,
@@ -144,8 +158,4 @@ pub enum Token {
     Cov,
     #[token("dist")]
     Dist,
-    #[token("true")]
-    True,
-    #[token("false")]
-    False,
 }

@@ -224,7 +224,7 @@ Polynomials for example would result in names like `x1_poly_1` or `x1_poly_2` as
 `me()`: Indicates that the predictor should be treated as containing measurement error.
 `mi()`: Indicates that the predictor should be treated as containing missing values.
 `cs()`: Indicates that the predictor should be treated as categorical specific.
-`gr()`: Indicates that the predictor should be treated as a grouping factor.
+`gr()`: Enhanced grouping factor with advanced options for controlling random effects structure.
 `time_index()`: Indicates that the predictor should be treated as a time index and not used in modeling, but for seasonal patterns.
 
 
@@ -265,3 +265,34 @@ use fiasto::parse_formula;
 let result = parse_formula("y ~ x + z, family = gaussian").unwrap();
 println!("Family: {:?}", result.family);
 ```
+
+### Enhanced gr() Function for Random Effects
+```rust
+use fiasto::parse_formula;
+
+// Basic gr() usage (equivalent to standard random effects)
+let result = parse_formula("y ~ x + (1 | gr(group))").unwrap();
+
+// Uncorrelated random effects
+let result = parse_formula("y ~ x + (x | gr(group, cov = FALSE))").unwrap();
+
+// Additional grouping with by parameter
+let result = parse_formula("y ~ x + (1 | gr(subject, by = treatment))").unwrap();
+
+// Cross-parameter correlation with id
+let result = parse_formula("y ~ x + (1 | gr(group, id = 2))").unwrap();
+
+// Non-normal distribution for random effects
+let result = parse_formula("y ~ x + (1 | gr(group, dist = student))").unwrap();
+
+// Complex example with multiple options
+let result = parse_formula("y ~ x + (x | gr(subject, by = treatment, cov = FALSE, id = 1, dist = student))").unwrap();
+```
+
+#### gr() Function Options:
+- **`by`**: Additional grouping variable (can be `NULL` or a variable name)
+- **`cov`**: Control correlation structure (`TRUE` for correlated, `FALSE` for independent)
+- **`id`**: String identifier for cross-parameter correlations
+- **`dist`**: Distribution specification for random effects (e.g., `"student"`)
+
+For detailed documentation, see [gr() Function Documentation](docs/gr_function.md).
