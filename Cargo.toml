@@ -10,15 +10,11 @@ homepage = "https://github.com/alexhallam/fiasto"
 repository = "https://github.com/alexhallam/fiasto"
 documentation = "https://docs.rs/fiasto"
 keywords = [
-    "formula",
-    "statistics",
     "regression",
     "formula-parser",
     "formulaic",
     "wilkinson",
     "r-formula",
-    "mixed-effects",
-    "statistical-models",
 ]
 categories = ["science", "data-structures", "parsing", "text-processing"]
 rust-version = "1.89.0"
