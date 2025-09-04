@@ -78,12 +78,38 @@ use crate::internal::{ast::Term, errors::ParseError, lexer::Token};
 /// - `"poly(x, 2)"` → Term::Function { name: "poly", args: [x, 2] }
 /// - `"log(price)"` → Term::Function { name: "log", args: [price] }
 pub fn parse_term<'a>(tokens: &'a [(Token, &'a str)], pos: &mut usize) -> Result<Term, ParseError> {
-    // If the token is a poly or column name then it will parse with `tok`
+    // If the token is a function token or column name then it will parse with `tok`
     let (tok, name_slice) = crate::internal::expect::expect(
         tokens,
         pos,
-        |t| matches!(t, Token::Poly | Token::ColumnName),
-        "Poly or ColumnName",
+        |t| {
+            matches!(
+                t,
+                Token::Poly
+                    | Token::ColumnName
+                    | Token::Log
+                    | Token::Offset
+                    | Token::Factor
+                    | Token::Scale
+                    | Token::Standardize
+                    | Token::Center
+                    | Token::BSplines
+                    | Token::GaussianProcess
+                    | Token::Monotonic
+                    | Token::MeasurementError
+                    | Token::MissingValues
+                    | Token::ForwardFill
+                    | Token::BackwardFill
+                    | Token::Diff
+                    | Token::Lag
+                    | Token::Lead
+                    | Token::Trunc
+                    | Token::Weights
+                    | Token::Trials
+                    | Token::Censored
+            )
+        },
+        "Function token or ColumnName",
     )?;
     // `tok` is matched to see if it is a function start
     // if it is a function start then it will check to see if the token is poly or a column name
@@ -91,6 +117,26 @@ pub fn parse_term<'a>(tokens: &'a [(Token, &'a str)], pos: &mut usize) -> Result
     if crate::internal::matches::matches(tokens, pos, |t| matches!(t, Token::FunctionStart)) {
         let fname = match tok {
             Token::Poly => "poly".to_string(),
+            Token::Log => "log".to_string(),
+            Token::Offset => "offset".to_string(),
+            Token::Factor => "factor".to_string(),
+            Token::Scale => "scale".to_string(),
+            Token::Standardize => "standardize".to_string(),
+            Token::Center => "center".to_string(),
+            Token::BSplines => "bs".to_string(),
+            Token::GaussianProcess => "gp".to_string(),
+            Token::Monotonic => "mono".to_string(),
+            Token::MeasurementError => "me".to_string(),
+            Token::MissingValues => "mi".to_string(),
+            Token::ForwardFill => "forward_fill".to_string(),
+            Token::BackwardFill => "backward_fill".to_string(),
+            Token::Diff => "diff".to_string(),
+            Token::Lag => "lag".to_string(),
+            Token::Lead => "lead".to_string(),
+            Token::Trunc => "trunc".to_string(),
+            Token::Weights => "weights".to_string(),
+            Token::Trials => "trials".to_string(),
+            Token::Censored => "cens".to_string(),
             Token::ColumnName => name_slice.to_string(),
             _ => unreachable!(),
         };
@@ -102,10 +148,36 @@ pub fn parse_term<'a>(tokens: &'a [(Token, &'a str)], pos: &mut usize) -> Result
         Ok(Term::Function { name: fname, args })
     } else {
         // If the token is a column name then it will parse the column name
-        // If the token is a poly then it will return an error
+        // If the token is a function token then it will return an error (functions require parentheses)
         match tok {
             Token::ColumnName => Ok(Term::Column(name_slice.to_string())),
             Token::Poly => Err(ParseError::Syntax("expected '(' after 'poly'".into())),
+            Token::Log => Err(ParseError::Syntax("expected '(' after 'log'".into())),
+            Token::Offset => Err(ParseError::Syntax("expected '(' after 'offset'".into())),
+            Token::Factor => Err(ParseError::Syntax("expected '(' after 'factor'".into())),
+            Token::Scale => Err(ParseError::Syntax("expected '(' after 'scale'".into())),
+            Token::Standardize => Err(ParseError::Syntax(
+                "expected '(' after 'standardize'".into(),
+            )),
+            Token::Center => Err(ParseError::Syntax("expected '(' after 'center'".into())),
+            Token::BSplines => Err(ParseError::Syntax("expected '(' after 'bs'".into())),
+            Token::GaussianProcess => Err(ParseError::Syntax("expected '(' after 'gp'".into())),
+            Token::Monotonic => Err(ParseError::Syntax("expected '(' after 'mono'".into())),
+            Token::MeasurementError => Err(ParseError::Syntax("expected '(' after 'me'".into())),
+            Token::MissingValues => Err(ParseError::Syntax("expected '(' after 'mi'".into())),
+            Token::ForwardFill => Err(ParseError::Syntax(
+                "expected '(' after 'forward_fill'".into(),
+            )),
+            Token::BackwardFill => Err(ParseError::Syntax(
+                "expected '(' after 'backward_fill'".into(),
+            )),
+            Token::Diff => Err(ParseError::Syntax("expected '(' after 'diff'".into())),
+            Token::Lag => Err(ParseError::Syntax("expected '(' after 'lag'".into())),
+            Token::Lead => Err(ParseError::Syntax("expected '(' after 'lead'".into())),
+            Token::Trunc => Err(ParseError::Syntax("expected '(' after 'trunc'".into())),
+            Token::Weights => Err(ParseError::Syntax("expected '(' after 'weights'".into())),
+            Token::Trials => Err(ParseError::Syntax("expected '(' after 'trials'".into())),
+            Token::Censored => Err(ParseError::Syntax("expected '(' after 'cens'".into())),
             _ => Err(ParseError::Unexpected {
                 expected: "term",
                 found: Some(tok),
