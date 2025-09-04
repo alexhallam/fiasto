@@ -1,0 +1,23 @@
+# Rust build artifacts
+/target/
+**/*.rs.bk
+*.pdb
+
+# Cargo
+# Note: For libraries, you might want to remove Cargo.lock
+# For applications, keep it for reproducible builds
+# Cargo.lock
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Documentation build
+docs/
+
+# Rust workspace artifacts
+**/target/

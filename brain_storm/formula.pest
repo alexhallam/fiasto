@@ -1,0 +1,40 @@
+WHITESPACE = _{ " " | "\t" | "\r" | "\n" }
+
+formula     = { response? ~ "~" ~ rhs }
+response    = { ident ~ ( "|" ~ add_terms )? }
+
+add_terms   = { add_term ~ ( "," ~ add_term )* }
+add_term    = _{ trials | se | cens | trunc | weights | offset_resp }
+
+trials      = { "trials" ~ "(" ~ (ident | number) ~ ")" }
+se          = { "se" ~ "(" ~ ident ~ ("," ~ "sigma" ~ "=" ~ boolean)? ~ ")" }
+cens        = { "cens" ~ "(" ~ ident ~ ("," ~ ident)? ~ ")" }       // optional y2
+trunc       = { "trunc" ~ "(" ~ ( "lb" ~ "=" ~ (number | ident) )? ~ ( "," ~ "ub" ~ "=" ~ (number | ident) )? ~ ")" }
+weights     = { "weights" ~ "(" ~ ident ~ ")" }
+offset_resp = { "offset" ~ "(" ~ ident ~ ")" }
+
+rhs         = { sum }
+sum         = { product ~ ( ("+"|"-") ~ product )* }
+product     = { term ~ ( "*" ~ term )* }
+term        = { interaction }
+interaction = { factor ~ ( ":" ~ factor )* }
+
+factor      = _{ random | special | ident | intercept0 }
+intercept0  = { "0" }
+
+random      = { "(" ~ re_terms ~ "|" ~ ident ~ ")" }
+re_terms    = { re_piece ~ ( "+" ~ re_piece )* }
+re_piece    = { "0" | "1" | ident }
+
+special     = { func ~ "(" ~ args? ~ ")" }
+func        = { "mo" | "me" | "s" | "cs" | "gp" | "offset" }
+
+args        = { arg ~ ( "," ~ arg )* }
+arg         = { (key ~ "=" ~ value) | value }
+key         = @{ ident }
+value       = _{ ident | number | quoted }
+
+ident       = @{ (ASCII_ALPHANUMERIC | "_" | "." )+ }
+number      = @{ "-"? ~ (ASCII_DIGIT+ ~ ("." ~ ASCII_DIGIT+)? ) }
+quoted      = @{ "\"" ~ ( (!"\"" ~ ANY)* ) ~ "\"" }
+boolean     = { "TRUE" | "FALSE" }

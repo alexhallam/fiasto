@@ -1,0 +1,211 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "BrmsFormulaParsed",
+  "type": "object",
+  "properties": {
+    "response": {
+      "type": "object",
+      "properties": {
+        "name":          { "type": "string" },               // response variable name
+        "censoring":     {                                   
+          "type": "object",                                  
+          "properties": {
+            "variable":       { "type": "string" },          // name of censoring indicator variable
+            "upper_bound_var":{ "type": "string" }           // name of upper bound variable (for interval censoring)
+          },
+          "required": ["variable"],
+          "additionalProperties": false
+        },
+        "trials":        { "type": ["string", "number"] },   // trials variable or constant (for binomial)
+        "weights":       { "type": "string" },               // case weights variable
+        "offset":        { "type": "string" },               // offset variable
+        "known_meas_error": {
+          "type": "object",
+          "properties": {
+            "variable":           { "type": "string" },      // name of known measurement error SD variable
+            "include_residual_sigma": { "type": "boolean" }  // whether to include residual sigma (for known SE) 
+          },
+          "required": ["variable"]
+        },
+        "truncation": {
+          "type": "object",
+          "properties": {
+            "lower": { "type": ["number", "string"] },       // lower truncation bound (numeric value or variable name)
+            "upper": { "type": ["number", "string"] }        // upper truncation bound
+          }
+        },
+        "decisions":    { "type": "string" },                // decision variable for response times (e.g., in Wiener diffusion)
+        "mi":           { "type": "boolean" }                // true if response is modeled with mi() for missing data
+      },
+      "required": ["name"]
+    },
+    "fixed_effects_terms": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/Term" }              // array of fixed effects (including special terms and interactions)
+    },
+    "random_effects_terms": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/RandomEffectTerm" }  // array of random effects grouping terms
+    },
+    "all_terms_flat": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/FlatTerm" }          // flat list of all terms (fixed + random components) for reference
+    },
+    "interactions": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/InteractionTerm" }   // list of interactions with component references
+    },
+    "transformations": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/Transformation" }    // list of special term function usages (e.g., mo, me, s, etc.)
+    },
+    "distributional_terms": {
+      "type": "object",
+      "patternProperties": {
+        "^[A-Za-z_]+$": { "$ref": "#/definitions/Subformula" }
+      },
+      "description": "Optional sub-models for distributional parameters (e.g., sigma, zi, etc.) indexed by parameter name"
+    },
+    "parameter_terms": {
+      "type": "object",
+      "patternProperties": {
+        "^[A-Za-z_]+$": { "$ref": "#/definitions/Subformula" }
+      },
+      "description": "Optional sub-models for user-defined non-linear parameters in non-linear formulas"
+    },
+    "metadata": {
+      "type": "object",
+      "properties": {
+        "nonlinear": { "type": "boolean" },                  // true if the model is non-linear (has parameter_terms)
+        "ordinal":   { "type": "boolean" },                  // true if the model is ordinal (implying cs() usage, etc.)
+        "family":    { "type": "string" },                   // distribution family (if known/needed for context)
+        "link":      { "type": "string" }                    // link function (if needed for context)
+      }
+    }
+  },
+  "required": [
+    "response",
+    "fixed_effects_terms",
+    "random_effects_terms",
+    "all_terms_flat",
+    "interactions",
+    "transformations"
+  ],
+  "definitions": {
+    "Term": {
+      "type": "object",
+      "properties": {
+        "term":       { "type": "string" },                  // term label (e.g., variable name or function term)
+        "type":       { "type": "string",                    // type of term (categorizes the term's role)
+          "enum": [
+            "intercept", "main", "interaction", 
+            "monotonic", "measurement_error", 
+            "category_specific", "spline", "gp", 
+            "mi", "offset"
+          ]
+        },
+        "variable":   { "type": "string" },                  // underlying variable name (for main effects or special terms)
+        "error_variable": { "type": "string" },              // error SD variable name (for me() terms)
+        "id":         { "type": "string" },                  // id tag (for mo() monotonic terms grouping)
+        "components": {                                      // component variable names (for interaction terms)
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "basis":      { "type": "string" },                  // spline basis type (for s() or gp() terms)
+        "df":         { "type": "integer" },                 // degrees of freedom or knots for spline/Gaussian process
+        "covariance": { "type": "string" },                  // covariance function (for gp terms, e.g., "matern32")
+        "by_variable":{ "type": "string" }                   // by-variable for spline or gp (if applicable)
+      },
+      "required": ["term", "type"]
+    },
+    "RandomEffectTerm": {
+      "type": "object",
+      "properties": {
+        "group":    { "type": "string" },                    // grouping factor name
+        "terms":    {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "term":     { "type": "string" },              // term label ("Intercept" or variable name for slope)
+              "type":     { "type": "string", "enum": ["intercept", "slope"] },
+              "variable": { "type": "string" }               // variable name for slope (if type=="slope")
+            },
+            "required": ["term", "type"]
+          }
+        },
+        "correlated": { "type": "boolean" }                  // whether effects in this group are modeled as correlated (default TRUE if multiple terms)
+      },
+      "required": ["group", "terms"]
+    },
+    "FlatTerm": {
+      "type": "object",
+      "properties": {
+        "term":   { "type": "string" },                      // term label (can include grouping for random effects)
+        "category": { "type": "string",                      // category of term 
+          "enum": ["fixed", "random_intercept", "random_slope"] 
+        },
+        "group":  { "type": "string" },                      // group factor (for random terms)
+        "variable": { "type": "string" }                     // variable (for random slope terms)
+      },
+      "required": ["term", "category"]
+    },
+    "InteractionTerm": {
+      "type": "object",
+      "properties": {
+        "term":       { "type": "string" },                  // interaction term label (e.g., "A:B")
+        "components": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "term":  { "type": "string" },                 // component term name
+              "index": { "type": "integer" }                 // position index of component term in the fixed_effects or all_terms list
+            },
+            "required": ["term"]
+          }
+        }
+      },
+      "required": ["term", "components"]
+    },
+    "Transformation": {
+      "type": "object",
+      "properties": {
+        "function": { "type": "string" },                    // name of special function (e.g., "mo", "me", "s", "cs", etc.)
+        "arguments": { "type": "object" }                    // object of arguments passed to the function (keys are arg names)
+      },
+      "required": ["function"]
+    },
+    "Subformula": {
+      "type": "object",
+      "properties": {
+        "fixed_effects_terms": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/Term" }
+        },
+        "random_effects_terms": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/RandomEffectTerm" }
+        },
+        "all_terms_flat": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/FlatTerm" }
+        },
+        "interactions": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/InteractionTerm" }
+        },
+        "transformations": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/Transformation" }
+        },
+        "metadata": {
+          "type": "object",
+          "properties": {
+            "has_intercept": { "type": "boolean" }           // whether an intercept is included in this subformula
+          }
+        }
+      }
+    }
+  }
+}
