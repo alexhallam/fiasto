@@ -51,7 +51,6 @@ jobs:
           
       - name: Check if version exists on crates.io
         id: crates-check
-        if: steps.tag-check.outputs.exists == 'false'
         run: |
           VERSION="${{ steps.version.outputs.version }}"
           # Check if version already exists on crates.io
@@ -120,14 +119,14 @@ jobs:
           echo "Version ${{ steps.version.outputs.version }} already exists on crates.io, skipping"
           
       - name: Setup Rust toolchain
-        if: steps.tag-check.outputs.exists == 'false' && steps.crates-check.outputs.exists == 'false'
+        if: steps.crates-check.outputs.exists == 'false'
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
           override: true
           
       - name: Cache dependencies
-        if: steps.tag-check.outputs.exists == 'false' && steps.crates-check.outputs.exists == 'false'
+        if: steps.crates-check.outputs.exists == 'false'
         uses: actions/cache@v3
         with:
           path: |
@@ -139,20 +138,20 @@ jobs:
             ${{ runner.os }}-cargo-
             
       - name: Build and test
-        if: steps.tag-check.outputs.exists == 'false' && steps.crates-check.outputs.exists == 'false'
+        if: steps.crates-check.outputs.exists == 'false'
         run: |
           cargo build --release
           cargo test
           
       - name: Verify package
-        if: steps.tag-check.outputs.exists == 'false' && steps.crates-check.outputs.exists == 'false'
+        if: steps.crates-check.outputs.exists == 'false'
         run: |
           echo "Verifying package contents..."
           cargo package --list
           echo "Package verification complete"
           
       - name: Publish to crates.io
-        if: steps.tag-check.outputs.exists == 'false' && steps.crates-check.outputs.exists == 'false'
+        if: steps.crates-check.outputs.exists == 'false'
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
         run: |
