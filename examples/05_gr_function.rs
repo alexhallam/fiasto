@@ -72,7 +72,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // gr() with id for cross-parameter correlation
     println!("7. gr() with id for cross-parameter correlation:");
 
-    let gr_id = "y ~ x + (1 | gr(group, id = \"2\"))";
+    let gr_id = "y ~ x + (1 | gr(group, id = 2))";
     println!("   gr() with id: {}", gr_id);
     match parse_formula(gr_id) {
         Ok(result) => println!("   ✓ Success: {}", serde_json::to_string_pretty(&result)?),
@@ -83,7 +83,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // gr() with dist for non-normal distributions
     println!("8. gr() with dist for non-normal distributions:");
 
-    let gr_dist = "y ~ x + (1 | gr(group, dist = \"student\"))";
+    let gr_dist = "y ~ x + (1 | gr(group, dist = student()))";
     println!("   gr() with dist: {}", gr_dist);
     match parse_formula(gr_dist) {
         Ok(result) => println!("   ✓ Success: {}", serde_json::to_string_pretty(&result)?),
@@ -95,7 +95,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("9. Complex gr() with all options:");
 
     let gr_complex =
-        "y ~ x + (x | gr(subject, by = treatment, cov = FALSE, id = \"1\", dist = \"student\"))";
+        "y ~ x + (x | gr(subject, by = treatment, cov = FALSE, id = 1, dist = student()))";
     println!("   Complex gr(): {}", gr_complex);
     match parse_formula(gr_complex) {
         Ok(result) => println!("   ✓ Success: {}", serde_json::to_string_pretty(&result)?),
