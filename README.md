@@ -296,3 +296,4 @@ let result = parse_formula("y ~ x + (x | gr(subject, by = treatment, cov = FALSE
 - **`dist`**: Distribution specification for random effects (e.g., `"student"`)
 
 For detailed documentation, see [gr() Function Documentation](docs/gr_function.md).
+# Trigger release workflow
