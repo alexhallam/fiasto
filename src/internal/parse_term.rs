@@ -61,7 +61,7 @@ use crate::internal::{ast::Term, errors::ParseError, lexer::Token};
 /// 4. For functions, parses argument list and expects closing parenthesis
 /// 
 /// # Grammar Rule
-/// ```
+/// ```text
 /// term = column_name | function_call
 /// function_call = (poly | column_name) "(" arg_list ")"
 /// arg_list = [argument ("," argument)*]

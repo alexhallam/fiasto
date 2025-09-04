@@ -38,7 +38,7 @@ use crate::internal::{ast::Family, errors::ParseError, lexer::Token};
 /// 4. Returns error for invalid family specifications
 /// 
 /// # Grammar Rule
-/// ```
+/// ```text
 /// family = "gaussian" | "binomial" | "poisson"
 /// ```
 /// 

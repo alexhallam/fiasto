@@ -35,10 +35,13 @@
 /// assert!(!matched_plus_again); // No plus found
 /// assert_eq!(pos, 1); // Position unchanged
 ///
+/// // Skip the column name at position 1
+/// pos += 1; // Now at position 2 (the minus sign)
+/// 
 /// // Try to match a minus sign
 /// let matched_minus = matches(&tokens, &mut pos, |t| matches!(t, Token::Minus));
 /// assert!(matched_minus); // Minus was found and consumed
-/// assert_eq!(pos, 2); // Position advanced
+/// assert_eq!(pos, 3); // Position advanced
 /// ```
 ///
 /// # How it works

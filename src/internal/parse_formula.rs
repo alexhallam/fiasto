@@ -51,7 +51,7 @@ use crate::internal::{ast::{Family, Term}, errors::ParseError, lexer::Token};
 /// 4. Optionally parses family specification if comma is present
 /// 
 /// # Grammar Rule
-/// ```
+/// ```text
 /// formula = response "~" rhs ["," family_spec]
 /// response = column_name
 /// rhs = term_list [intercept_spec]

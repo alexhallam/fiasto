@@ -36,7 +36,7 @@ use crate::internal::{errors::ParseError, lexer::Token};
 /// 3. Advances the position to prepare for parsing the tilde and right-hand side
 /// 
 /// # Grammar Rule
-/// ```
+/// ```text
 /// formula = response "~" rhs ["," family_spec]
 /// response = column_name
 /// ```

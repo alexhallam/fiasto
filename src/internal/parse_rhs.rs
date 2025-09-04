@@ -43,7 +43,7 @@ use crate::internal::{ast::Term, errors::ParseError, lexer::Token};
 /// 4. Returns the collected terms and intercept flag
 /// 
 /// # Grammar Rule
-/// ```
+/// ```text
 /// rhs = [term] ("+" term)* ["-" "1"]
 /// term = column_name | function_call
 /// ```
