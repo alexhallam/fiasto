@@ -27,7 +27,66 @@ use serde_json::Value;
 ///
 /// # Arguments
 /// * `formula` - A string containing a formula in the format "y ~ x + poly(x, 2), family = gaussian"
-///
+/// `formula = "y ~ x + poly(x, 2) + poly(x1, 4) + log(x1) - 1, family = gaussian"`
+/// ```text
+/// {
+///  "column_names": [
+///    {
+///      "id": 1,
+///      "name": "y"
+///    },
+///    {
+///      "id": 2,
+///      "name": "x"
+///    },
+///    {
+///      "id": 3,
+///      "name": "x1"
+///    }
+///  ],
+///  "fix_effects_columns": [
+///    {
+///      "column_name_struct_id": 2,
+///      "name": "x"
+///    },
+///    {
+///      "column_name_struct_id": 2,
+///      "name": "poly(x, 2)"
+///    },
+///    {
+///      "column_name_struct_id": 3,
+///      "name": "poly(x1, 4)"
+///    },
+///    {
+///      "column_name_struct_id": 3,
+///      "name": "log(x1)"
+///    }
+///  ],
+///  "formula": "y ~ x + poly(x, 2) + poly(x1, 4) + log(x1) - 1, family = gaussian",
+///  "has_intercept": false,
+///  "random_effects_columns": [],
+///  "response_columns": [
+///    {
+///      "column_name_struct_id": 1,
+///      "name": "y"
+///    }
+///  ],
+///  "transformations": [
+///    {
+///      "column_name_struct_id": 2,
+///      "name": "poly"
+///    },
+///    {
+///      "column_name_struct_id": 3,
+///      "name": "poly"
+///    },
+///    {
+///      "column_name_struct_id": 3,
+///      "name": "log"
+///    }
+///  ]
+/// }
+/// ```
 /// # Returns
 /// * `Result<Value, Box<dyn std::error::Error>>` - The formula metadata as JSON, or an error
 ///

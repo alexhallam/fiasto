@@ -15,12 +15,14 @@
 
 ---
 
-<p align="center">(F)ormulas (I)n (AST) (O)ut. High-performance modern Wilkinson's formula parsing as seen in R/brms/formulaic/formulae. Supports linear
-models and mixed effects models</p>
+<p align="center">(F)ormulas (I)n (AST) (O)ut</p>
 
-## 🚀 Ready for Production
+High-performance modern Wilkinson's formula parsing as seen in R/brms/formulaic/formulae. Supports linear
+models and mixed effects models
 
-This library is production-ready and actively maintained.
+## ⭕ In Testing
+
+This library is in test and actively changing.
 
 ## Motivation
 
