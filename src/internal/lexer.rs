@@ -22,14 +22,82 @@ pub enum Token {
     #[token("+")]
     Plus,
 
+    #[token("|")]
+    Pipe,
+
+    #[token(":")]
+    InteractionOnly,
+
+    #[token("*")]
+    InteractionAndEffect,
+
     #[token("(")]
     FunctionStart,
     #[token(")")]
     FunctionEnd,
 
+    // These transformations should all be followed by a "("
     #[token("poly")]
     Poly,
+    #[token("offset")]
+    Offset,
+    #[token("factor")]
+    Factor,
+    // center and scale
+    #[token("scale")]
+    Scale,
+    // standardize
+    #[token("standardize")]
+    Standardize,
+    // center
+    #[token("center")]
+    Center,
+    #[token("log")]
+    Log,
+    // B-splines
+    #[token("bs")]
+    BSplines,
+    // Gaussian process
+    #[token("gp")]
+    GaussianProcess,
+    // Monotonic
+    #[token("mono")]
+    Monotonic,
+    // Measurement error
+    #[token("me")]
+    MeasurementError,
+    // Missing values
+    #[token("mi")]
+    MissingValues,
+    // foward Fill
+    #[token("forward_fill")]
+    ForwardFill,
+    // backward Fill
+    #[token("backward_fill")]
+    BackwardFill,
+    // diff
+    #[token("diff")]
+    Diff,
+    // lag
+    #[token("lag")]
+    Lag,
+    // lead
+    #[token("lead")]
+    Lead,
+    // trunc
+    #[token("trunc")]
+    Trunc,
+    // weights
+    #[token("weights")]
+    Weights,
+    // trials
+    #[token("trials")]
+    Trials,
+    // cens
+    #[token("cens")]
+    Censored,
 
+    //
     #[token(",")]
     Comma,
     #[token("=")]
