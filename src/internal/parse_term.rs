@@ -79,20 +79,29 @@ use crate::internal::{ast::Term, errors::ParseError, lexer::Token};
 /// - `"log(price)"` → Term::Function { name: "log", args: [price] }
 pub fn parse_term<'a>(tokens: &'a [(Token, &'a str)], pos: &mut usize) -> Result<Term, ParseError> {
     // Check if this is a random effect (starts with opening parenthesis)
-    if crate::internal::peek::peek(tokens, *pos).map(|(t, _)| matches!(t, Token::FunctionStart)).unwrap_or(false) {
+    if crate::internal::peek::peek(tokens, *pos)
+        .map(|(t, _)| matches!(t, Token::FunctionStart))
+        .unwrap_or(false)
+    {
         // Check if the next token after the opening parenthesis suggests a random effect
         let saved_pos = *pos;
         *pos += 1; // Skip the opening parenthesis
-        
-        let is_random_effect = crate::internal::peek::peek(tokens, *pos).map(|(t, _)| {
-            matches!(t, Token::One | Token::Zero | Token::Minus | Token::ColumnName)
-        }).unwrap_or(false);
-        
+
+        let is_random_effect = crate::internal::peek::peek(tokens, *pos)
+            .map(|(t, _)| {
+                matches!(
+                    t,
+                    Token::One | Token::Zero | Token::Minus | Token::ColumnName
+                )
+            })
+            .unwrap_or(false);
+
         *pos = saved_pos; // Restore position
-        
+
         if is_random_effect {
             // Parse as random effect
-            let random_effect = crate::internal::parse_random_effect::parse_random_effect(tokens, pos)?;
+            let random_effect =
+                crate::internal::parse_random_effect::parse_random_effect(tokens, pos)?;
             return Ok(Term::RandomEffect(random_effect));
         }
     }
@@ -174,7 +183,23 @@ pub fn parse_term<'a>(tokens: &'a [(Token, &'a str)], pos: &mut usize) -> Result
         // If the token is a column name then it will parse the column name
         // If the token is a function token then it will return an error (functions require parentheses)
         match tok {
-            Token::ColumnName => Ok(Term::Column(name_slice.to_string())),
+            Token::ColumnName => {
+                // Check if this is followed by an interaction
+                if crate::internal::matches::matches(tokens, pos, |t| {
+                    matches!(t, Token::InteractionOnly | Token::InteractionAndEffect)
+                }) {
+                    let _interaction_type = &crate::internal::peek::peek(tokens, *pos).unwrap().0;
+                    *pos += 1; // Skip the interaction token
+
+                    let right_term = parse_term(tokens, pos)?;
+                    Ok(Term::Interaction {
+                        left: Box::new(Term::Column(name_slice.to_string())),
+                        right: Box::new(right_term),
+                    })
+                } else {
+                    Ok(Term::Column(name_slice.to_string()))
+                }
+            }
             Token::Poly => Err(ParseError::Syntax("expected '(' after 'poly'".into())),
             Token::Log => Err(ParseError::Syntax("expected '(' after 'log'".into())),
             Token::Offset => Err(ParseError::Syntax("expected '(' after 'offset'".into())),

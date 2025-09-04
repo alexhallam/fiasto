@@ -13,6 +13,7 @@ pub enum Family {
 pub enum Term {
     Column(String),
     Function { name: String, args: Vec<Argument> },
+    Interaction { left: Box<Term>, right: Box<Term> },
     RandomEffect(RandomEffect),
 }
 

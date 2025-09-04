@@ -1,46 +1,74 @@
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 // ---------------------------
 // DATA STRUCTURES
 // ---------------------------
 
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub enum VariableRole {
+    Response,
+    FixedEffect,
+    RandomEffect,
+    GroupingVariable,
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
-/// Represents the distinct column names as they were input by the user
-/// Example:
-/// "formula": "y ~ x + poly(x, 2) + poly(x1, 4) + log(x1) - 1, family = gaussian"
-///     {
-///       "id": 1,
-///       "name": "y"
-///     },
-///     {
-///       "id": 2,
-///       "name": "x"
-///     },
-///     {
-///       "id": 3,
-///       "name": "x1"
-///     }
+pub struct Transformation {
+    pub function: String,
+    pub parameters: serde_json::Value, // Flexible parameters object
+    pub generates_columns: Vec<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct Interaction {
+    pub with: Vec<String>,
+    pub order: u32,
+    pub context: String,                   // "fixed_effects" or "random_effects"
+    pub grouping_variable: Option<String>, // Only for random effects
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct RandomEffectInfo {
+    pub kind: String, // "intercept", "slope", "grouping"
+    pub grouping_variable: String,
+    pub has_intercept: bool,
+    pub correlated: bool,
+    pub includes_interactions: Vec<String>,
+    pub variables: Option<Vec<String>>, // For grouping kind
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct VariableInfo {
+    pub id: u32,
+    pub roles: Vec<VariableRole>,
+    pub transformations: Vec<Transformation>,
+    pub interactions: Vec<Interaction>,
+    pub random_effects: Vec<RandomEffectInfo>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct FormulaMetadataInfo {
+    pub has_intercept: bool,
+    pub is_random_effects_model: bool,
+    pub has_uncorrelated_slopes_and_intercepts: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct FormulaMetaData {
+    pub formula: String,
+    pub metadata: FormulaMetadataInfo,
+    pub columns: HashMap<String, VariableInfo>,
+}
+
+// Legacy structures for backward compatibility
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ColumnNameStruct {
     pub id: u32,
     pub name: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-/// Represents transformations applied to a column
-/// Example:
-///   "formula": "y ~ x + poly(x, 2) + poly(x1, 4) + log(x1) - 1, family = gaussian"
-///    {
-///      "column_name_struct_id": 2,
-///      "name": "poly"
-///    },
-///    {
-///      "column_name_struct_id": 3,
-///      "name": "poly"
-///    },
-///    {
-///      "column_name_struct_id": 3,
-///      "name": "log"
-///    }
 pub struct TransformationStruct {
     pub column_name_struct_id: u32,
     pub name: String,
@@ -50,16 +78,4 @@ pub struct TransformationStruct {
 pub struct ColumnSuggestedNameStruct {
     pub column_name_struct_id: u32,
     pub name: String,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct FormulaMetaData {
-    pub transformations: Vec<TransformationStruct>,
-    pub column_names: Vec<ColumnNameStruct>,
-    pub has_intercept: bool,
-    pub has_uncorrelated_slopes_and_intercepts: bool,
-    pub formula: String,
-    pub response_columns: Vec<ColumnSuggestedNameStruct>,
-    pub fix_effects_columns: Vec<ColumnSuggestedNameStruct>,
-    pub random_effects_columns: Vec<ColumnSuggestedNameStruct>,
 }

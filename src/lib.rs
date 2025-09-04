@@ -1,24 +1,24 @@
 pub mod internal {
-    pub mod parse;
     pub mod ast;
     pub mod data_structures;
     pub mod errors;
-    pub mod lexer;
-    pub mod meta_builder;
-    pub mod parser;
-    pub mod new;
-    pub mod peek;
-    pub mod next;
-    pub mod matches;
     pub mod expect;
-    pub mod parse_response;
+    pub mod lexer;
+    pub mod matches;
+    pub mod meta_builder;
+    pub mod new;
+    pub mod next;
+    pub mod parse;
+    pub mod parse_arg;
+    pub mod parse_arg_list;
+    pub mod parse_family;
     pub mod parse_formula;
+    pub mod parse_random_effect;
+    pub mod parse_response;
     pub mod parse_rhs;
     pub mod parse_term;
-    pub mod parse_arg_list;
-    pub mod parse_arg;
-    pub mod parse_family;
-    pub mod parse_random_effect;
+    pub mod parser;
+    pub mod peek;
 }
 
 use internal::parse::{MetaBuilder, Parser, Term};
@@ -111,6 +111,7 @@ pub fn parse_formula(formula: &str) -> Result<Value, Box<dyn std::error::Error>>
         match t {
             Term::Column(name) => mb.push_plain_term(&name),
             Term::Function { name, args } => mb.push_function_term(&name, &args),
+            Term::Interaction { left, right } => mb.push_interaction(&left, &right),
             Term::RandomEffect(random_effect) => mb.push_random_effect(&random_effect),
         }
     }
