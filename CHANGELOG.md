@@ -1,3 +1,7 @@
+## [0.2.1] - 2025-09-04
+
+just to trigger a new release
+
 ## [0.2.0] - 2025-09-04
 
 ### Added
