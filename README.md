@@ -7,7 +7,7 @@
 <h1 align="center">fiasto</h1>
 
 <p align="center">
-  <img src="img/mango_pixel.png" alt="logo" width="120">
+  <img src="img/mango_pixel2.png" alt="logo" width="120">
 </p>
 
 ---
