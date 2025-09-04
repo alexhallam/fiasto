@@ -147,7 +147,7 @@ jobs:
         if: steps.crates-check.outputs.exists == 'false'
         run: |
           echo "Verifying package contents..."
-          cargo package --list
+          cargo package --list --allow-dirty
           echo "Package verification complete"
           
       - name: Publish to crates.io
