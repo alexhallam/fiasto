@@ -45,6 +45,7 @@ pub struct VariableInfo {
     pub transformations: Vec<Transformation>,
     pub interactions: Vec<Interaction>,
     pub random_effects: Vec<RandomEffectInfo>,
+    pub generated_columns: Vec<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -52,6 +53,7 @@ pub struct FormulaMetadataInfo {
     pub has_intercept: bool,
     pub is_random_effects_model: bool,
     pub has_uncorrelated_slopes_and_intercepts: bool,
+    pub family: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -59,6 +61,7 @@ pub struct FormulaMetaData {
     pub formula: String,
     pub metadata: FormulaMetadataInfo,
     pub columns: HashMap<String, VariableInfo>,
+    pub all_generated_columns: Vec<String>,
 }
 
 // Legacy structures for backward compatibility

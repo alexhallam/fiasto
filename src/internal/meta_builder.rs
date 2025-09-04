@@ -52,6 +52,7 @@ impl MetaBuilder {
                     transformations: Vec::new(),
                     interactions: Vec::new(),
                     random_effects: Vec::new(),
+                    generated_columns: vec![name.to_string()], // Default to the variable name itself
                 },
             );
             id
@@ -70,7 +71,9 @@ impl MetaBuilder {
     /// Adds a transformation to a variable
     pub fn add_transformation(&mut self, name: &str, transformation: Transformation) {
         if let Some(var_info) = self.columns.get_mut(name) {
-            var_info.transformations.push(transformation);
+            var_info.transformations.push(transformation.clone());
+            // Update generated columns with the transformation's generated columns
+            var_info.generated_columns = transformation.generates_columns;
         }
     }
 
@@ -88,10 +91,26 @@ impl MetaBuilder {
         }
     }
 
-    /// Adds a response variable
+    /// Adds a response variable (always gets ID 1)
     pub fn push_response(&mut self, name: &str) {
-        self.ensure_variable(name);
-        self.add_role(name, VariableRole::Response);
+        // Ensure response variable gets ID 1
+        if !self.name_to_id.contains_key(name) {
+            self.name_to_id.insert(name.to_string(), 1);
+            self.columns.insert(
+                name.to_string(),
+                VariableInfo {
+                    id: 1,
+                    roles: vec![VariableRole::Response],
+                    transformations: Vec::new(),
+                    interactions: Vec::new(),
+                    random_effects: Vec::new(),
+                    generated_columns: vec![name.to_string()],
+                },
+            );
+            self.next_id = 2; // Start other variables from ID 2
+        } else {
+            self.add_role(name, VariableRole::Response);
+        }
     }
 
     /// Adds a fixed effect variable
@@ -119,6 +138,9 @@ impl MetaBuilder {
             self.add_role(&left_var, VariableRole::FixedEffect);
             self.add_role(&right_var, VariableRole::FixedEffect);
 
+            // Generate interaction column name
+            let interaction_name = format!("{}_z", left_var);
+
             // Add interaction info to both variables
             let interaction = Interaction {
                 with: vec![right_var.clone()],
@@ -135,6 +157,13 @@ impl MetaBuilder {
                 grouping_variable: None,
             };
             self.add_interaction(&right_var, interaction);
+
+            // Update generated columns for the left variable to include the interaction
+            if let Some(var_info) = self.columns.get_mut(&left_var) {
+                if !var_info.generated_columns.contains(&interaction_name) {
+                    var_info.generated_columns.push(interaction_name);
+                }
+            }
         }
     }
 
@@ -394,15 +423,27 @@ impl MetaBuilder {
         self,
         input: &str,
         has_intercept: bool,
+        family: Option<String>,
     ) -> crate::internal::data_structures::FormulaMetaData {
+        // Generate all_generated_columns ordered by ID
+        let mut all_generated_columns = Vec::new();
+        let mut sorted_vars: Vec<_> = self.columns.values().collect();
+        sorted_vars.sort_by_key(|v| v.id);
+
+        for var in sorted_vars {
+            all_generated_columns.extend(var.generated_columns.clone());
+        }
+
         crate::internal::data_structures::FormulaMetaData {
             formula: input.to_string(),
             metadata: FormulaMetadataInfo {
                 has_intercept,
                 is_random_effects_model: self.is_random_effects_model,
                 has_uncorrelated_slopes_and_intercepts: self.has_uncorrelated_slopes_and_intercepts,
+                family,
             },
             columns: self.columns,
+            all_generated_columns,
         }
     }
 }

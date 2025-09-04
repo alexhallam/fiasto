@@ -103,7 +103,7 @@ use serde_json::Value;
 /// ```
 pub fn parse_formula(formula: &str) -> Result<Value, Box<dyn std::error::Error>> {
     let mut p = Parser::new(formula)?;
-    let (response, terms, has_intercept, _family_opt) = p.parse_formula()?;
+    let (response, terms, has_intercept, family_opt) = p.parse_formula()?;
 
     let mut mb = MetaBuilder::new();
     mb.push_response(&response);
@@ -115,7 +115,8 @@ pub fn parse_formula(formula: &str) -> Result<Value, Box<dyn std::error::Error>>
             Term::RandomEffect(random_effect) => mb.push_random_effect(&random_effect),
         }
     }
-    let meta = mb.build(formula, has_intercept);
+    let family_name = family_opt.map(|f| format!("{:?}", f).to_lowercase());
+    let meta = mb.build(formula, has_intercept, family_name);
 
     Ok(serde_json::to_value(meta)?)
 }
