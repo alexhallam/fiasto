@@ -57,6 +57,7 @@ pub struct FormulaMetaData {
     pub transformations: Vec<TransformationStruct>,
     pub column_names: Vec<ColumnNameStruct>,
     pub has_intercept: bool,
+    pub has_uncorrelated_slopes_and_intercepts: bool,
     pub formula: String,
     pub response_columns: Vec<ColumnSuggestedNameStruct>,
     pub fix_effects_columns: Vec<ColumnSuggestedNameStruct>,

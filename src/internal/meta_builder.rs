@@ -18,6 +18,7 @@ use std::collections::HashMap;
 /// The response_cols is a vector of the response columns
 /// The fixed_cols is a vector of the fixed columns
 /// The random_cols is a vector of the random columns
+/// The has_uncorrelated_slopes_and_intercepts tracks if any random effects use || syntax
 pub struct MetaBuilder {
     name_to_id: HashMap<String, u32>,
     columns: Vec<ColumnNameStruct>,
@@ -25,6 +26,7 @@ pub struct MetaBuilder {
     response_cols: Vec<ColumnSuggestedNameStruct>,
     fixed_cols: Vec<ColumnSuggestedNameStruct>,
     random_cols: Vec<ColumnSuggestedNameStruct>,
+    has_uncorrelated_slopes_and_intercepts: bool,
 }
 
 /// MetaBuilder does the following
@@ -107,6 +109,13 @@ impl MetaBuilder {
 
     // This function handles random effects
     pub fn push_random_effect(&mut self, random_effect: &RandomEffect) {
+        // Check if this random effect uses uncorrelated syntax (||)
+        if matches!(
+            random_effect.correlation,
+            crate::internal::ast::CorrelationType::Uncorrelated
+        ) {
+            self.has_uncorrelated_slopes_and_intercepts = true;
+        }
         // Process each term in the random effect
         for term in &random_effect.terms {
             match term {
@@ -235,6 +244,7 @@ impl MetaBuilder {
             transformations: self.transformations,
             column_names: self.columns,
             has_intercept,
+            has_uncorrelated_slopes_and_intercepts: self.has_uncorrelated_slopes_and_intercepts,
             formula: input.to_string(),
             response_columns: self.response_cols,
             fix_effects_columns: self.fixed_cols,

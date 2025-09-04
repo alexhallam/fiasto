@@ -24,26 +24,26 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
     println!();
 
-    // // Random intercepts + slopes (correlated)
-    // let correlated = "y ~ x + (x | group)";
-    // println!("   Random intercepts + slopes (correlated): {}", correlated);
-    // match parse_formula(correlated) {
-    //     Ok(result) => println!("   ✓ Success: {}", serde_json::to_string_pretty(&result)?),
-    //     Err(e) => println!("   ✗ Error: {}", e),
-    // }
-    // println!();
+    // Random intercepts + slopes (correlated)
+    let correlated = "y ~ x + (x | group)";
+    println!("   Random intercepts + slopes (correlated): {}", correlated);
+    match parse_formula(correlated) {
+        Ok(result) => println!("   ✓ Success: {}", serde_json::to_string_pretty(&result)?),
+        Err(e) => println!("   ✗ Error: {}", e),
+    }
+    println!();
 
-    // // Random intercepts + slopes (uncorrelated)
-    // let uncorrelated = "y ~ x + (x || group)";
-    // println!(
-    //     "   Random intercepts + slopes (uncorrelated): {}",
-    //     uncorrelated
-    // );
-    // match parse_formula(uncorrelated) {
-    //     Ok(result) => println!("   ✓ Success: {}", serde_json::to_string_pretty(&result)?),
-    //     Err(e) => println!("   ✗ Error: {}", e),
-    // }
-    // println!();
+    // Random intercepts + slopes (uncorrelated)
+    let uncorrelated = "y ~ x + (x || group)";
+    println!(
+        "   Random intercepts + slopes (uncorrelated): {}",
+        uncorrelated
+    );
+    match parse_formula(uncorrelated) {
+        Ok(result) => println!("   ✓ Success: {}", serde_json::to_string_pretty(&result)?),
+        Err(e) => println!("   ✗ Error: {}", e),
+    }
+    println!();
 
     // // Enhanced grouping with gr() function
     // println!("2. Enhanced Grouping with gr() function:");
@@ -170,13 +170,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // }
     // println!();
 
-    // let mixed_correlation = "y ~ x + (x | group) + (y || group)";
-    // println!("   Mixed correlation structures: {}", mixed_correlation);
-    // match parse_formula(mixed_correlation) {
-    //     Ok(result) => println!("   ✓ Success: {}", serde_json::to_string_pretty(&result)?),
-    //     Err(e) => println!("   ✗ Error: {}", e),
-    // }
-    // println!();
+    let mixed_correlation = "y ~ x + (x | group) + (y || group)";
+    println!("   Mixed correlation structures: {}", mixed_correlation);
+    match parse_formula(mixed_correlation) {
+        Ok(result) => println!("   ✓ Success: {}", serde_json::to_string_pretty(&result)?),
+        Err(e) => println!("   ✗ Error: {}", e),
+    }
+    println!();
 
     // let interaction_random = "y ~ x + (x*y | group)";
     // println!(
