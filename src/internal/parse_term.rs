@@ -78,6 +78,25 @@ use crate::internal::{ast::Term, errors::ParseError, lexer::Token};
 /// - `"poly(x, 2)"` → Term::Function { name: "poly", args: [x, 2] }
 /// - `"log(price)"` → Term::Function { name: "log", args: [price] }
 pub fn parse_term<'a>(tokens: &'a [(Token, &'a str)], pos: &mut usize) -> Result<Term, ParseError> {
+    // Check if this is a random effect (starts with opening parenthesis)
+    if crate::internal::peek::peek(tokens, *pos).map(|(t, _)| matches!(t, Token::FunctionStart)).unwrap_or(false) {
+        // Check if the next token after the opening parenthesis suggests a random effect
+        let saved_pos = *pos;
+        *pos += 1; // Skip the opening parenthesis
+        
+        let is_random_effect = crate::internal::peek::peek(tokens, *pos).map(|(t, _)| {
+            matches!(t, Token::One | Token::Zero | Token::Minus | Token::ColumnName)
+        }).unwrap_or(false);
+        
+        *pos = saved_pos; // Restore position
+        
+        if is_random_effect {
+            // Parse as random effect
+            let random_effect = crate::internal::parse_random_effect::parse_random_effect(tokens, pos)?;
+            return Ok(Term::RandomEffect(random_effect));
+        }
+    }
+
     // If the token is a function token or column name then it will parse with `tok`
     let (tok, name_slice) = crate::internal::expect::expect(
         tokens,
@@ -107,6 +126,11 @@ pub fn parse_term<'a>(tokens: &'a [(Token, &'a str)], pos: &mut usize) -> Result
                     | Token::Weights
                     | Token::Trials
                     | Token::Censored
+                    | Token::Gr
+                    | Token::Mm
+                    | Token::Mmc
+                    | Token::Cs
+                    | Token::FunctionStart
             )
         },
         "Function token or ColumnName",

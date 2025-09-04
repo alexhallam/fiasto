@@ -1,5 +1,5 @@
 use super::{
-    ast::Argument,
+    ast::{Argument, Grouping, RandomEffect, RandomTerm},
     data_structures::{
         ColumnNameStruct, ColumnSuggestedNameStruct, FormulaMetaData, TransformationStruct,
     },
@@ -81,6 +81,8 @@ impl MetaBuilder {
             .map(|a| match a {
                 Argument::Ident(s) => s.clone(),
                 Argument::Integer(n) => n.to_string(),
+                Argument::String(s) => format!("\"{}\"", s),
+                Argument::Boolean(b) => b.to_string(),
             })
             .collect::<Vec<_>>()
             .join(", ");
@@ -100,6 +102,131 @@ impl MetaBuilder {
                 column_name_struct_id: 0,
                 name: suggested,
             });
+        }
+    }
+
+    // This function handles random effects
+    pub fn push_random_effect(&mut self, random_effect: &RandomEffect) {
+        // Process each term in the random effect
+        for term in &random_effect.terms {
+            match term {
+                RandomTerm::Column(name) => {
+                    if name != "1" {
+                        let id = self.ensure_col(name);
+                        self.random_cols.push(ColumnSuggestedNameStruct {
+                            column_name_struct_id: id,
+                            name: name.clone(),
+                        });
+                    }
+                }
+                RandomTerm::Function { name, args } => {
+                    let base_ident = args.iter().find_map(|a| match a {
+                        Argument::Ident(s) => Some(s.as_str()),
+                        _ => None,
+                    });
+
+                    let base_id = base_ident.map(|col| self.ensure_col(col)).unwrap_or(0);
+
+                    let arg_str = args
+                        .iter()
+                        .map(|a| match a {
+                            Argument::Ident(s) => s.clone(),
+                            Argument::Integer(n) => n.to_string(),
+                            Argument::String(s) => format!("\"{}\"", s),
+                            Argument::Boolean(b) => b.to_string(),
+                        })
+                        .collect::<Vec<_>>()
+                        .join(", ");
+                    let suggested = format!("{name}({arg_str})");
+
+                    if base_id != 0 {
+                        self.transformations.push(TransformationStruct {
+                            column_name_struct_id: base_id,
+                            name: name.clone(),
+                        });
+                        self.random_cols.push(ColumnSuggestedNameStruct {
+                            column_name_struct_id: base_id,
+                            name: suggested,
+                        });
+                    } else {
+                        self.random_cols.push(ColumnSuggestedNameStruct {
+                            column_name_struct_id: 0,
+                            name: suggested,
+                        });
+                    }
+                }
+                RandomTerm::Interaction { left, right } => {
+                    // Handle interactions in random effects
+                    let left_name = match left.as_ref() {
+                        RandomTerm::Column(name) => name.clone(),
+                        _ => "interaction".to_string(),
+                    };
+                    let right_name = match right.as_ref() {
+                        RandomTerm::Column(name) => name.clone(),
+                        _ => "interaction".to_string(),
+                    };
+                    let interaction_name = format!("{}:{}", left_name, right_name);
+                    let id = self.ensure_col(&interaction_name);
+                    self.random_cols.push(ColumnSuggestedNameStruct {
+                        column_name_struct_id: id,
+                        name: interaction_name,
+                    });
+                }
+                RandomTerm::SuppressIntercept => {
+                    // Intercept suppression - no column to add
+                }
+            }
+        }
+
+        // Process grouping variables - these represent the random effect structure
+        match &random_effect.grouping {
+            Grouping::Simple(group) => {
+                let id = self.ensure_col(group);
+                self.random_cols.push(ColumnSuggestedNameStruct {
+                    column_name_struct_id: id,
+                    name: group.clone(),
+                });
+            }
+            Grouping::Gr { group, .. } => {
+                let id = self.ensure_col(group);
+                self.random_cols.push(ColumnSuggestedNameStruct {
+                    column_name_struct_id: id,
+                    name: group.clone(),
+                });
+            }
+            Grouping::Mm { groups } => {
+                for group in groups {
+                    let id = self.ensure_col(group);
+                    self.random_cols.push(ColumnSuggestedNameStruct {
+                        column_name_struct_id: id,
+                        name: group.clone(),
+                    });
+                }
+            }
+            Grouping::Interaction { left, right } => {
+                let left_id = self.ensure_col(left);
+                let right_id = self.ensure_col(right);
+                self.random_cols.push(ColumnSuggestedNameStruct {
+                    column_name_struct_id: left_id,
+                    name: left.clone(),
+                });
+                self.random_cols.push(ColumnSuggestedNameStruct {
+                    column_name_struct_id: right_id,
+                    name: right.clone(),
+                });
+            }
+            Grouping::Nested { outer, inner } => {
+                let outer_id = self.ensure_col(outer);
+                let inner_id = self.ensure_col(inner);
+                self.random_cols.push(ColumnSuggestedNameStruct {
+                    column_name_struct_id: outer_id,
+                    name: outer.clone(),
+                });
+                self.random_cols.push(ColumnSuggestedNameStruct {
+                    column_name_struct_id: inner_id,
+                    name: inner.clone(),
+                });
+            }
         }
     }
 

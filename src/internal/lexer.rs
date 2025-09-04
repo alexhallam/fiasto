@@ -9,6 +9,8 @@ use logos::Logos;
 pub enum Token {
     #[token("-")]
     Minus,
+    #[token("0")]
+    Zero,
     #[token("1")]
     One,
     #[regex(r"[2-9]\d*")]
@@ -17,6 +19,9 @@ pub enum Token {
     #[regex(r"[a-zA-Z][a-zA-Z0-9_]*")]
     ColumnName,
 
+    #[regex(r#""[^"]*""#)]
+    StringLiteral,
+
     #[token("~")]
     Tilde,
     #[token("+")]
@@ -24,9 +29,14 @@ pub enum Token {
 
     #[token("|")]
     Pipe,
+    #[token("||")]
+    DoublePipe,
 
     #[token(":")]
     InteractionOnly,
+
+    #[token("/")]
+    Slash,
 
     #[token("*")]
     InteractionAndEffect,
@@ -97,6 +107,16 @@ pub enum Token {
     #[token("cens")]
     Censored,
 
+    // Random effects functions
+    #[token("gr")]
+    Gr,
+    #[token("mm")]
+    Mm,
+    #[token("mmc")]
+    Mmc,
+    #[token("cs")]
+    Cs,
+
     //
     #[token(",")]
     Comma,
@@ -112,4 +132,20 @@ pub enum Token {
     Binomial,
     #[token("poisson")]
     Poisson,
+
+    // gr() function arguments
+    #[token("cor")]
+    Cor,
+    #[token("id")]
+    Id,
+    #[token("by")]
+    By,
+    #[token("cov")]
+    Cov,
+    #[token("dist")]
+    Dist,
+    #[token("true")]
+    True,
+    #[token("false")]
+    False,
 }

@@ -18,6 +18,7 @@ pub mod internal {
     pub mod parse_arg_list;
     pub mod parse_arg;
     pub mod parse_family;
+    pub mod parse_random_effect;
 }
 
 use internal::parse::{MetaBuilder, Parser, Term};
@@ -110,6 +111,7 @@ pub fn parse_formula(formula: &str) -> Result<Value, Box<dyn std::error::Error>>
         match t {
             Term::Column(name) => mb.push_plain_term(&name),
             Term::Function { name, args } => mb.push_function_term(&name, &args),
+            Term::RandomEffect(random_effect) => mb.push_random_effect(&random_effect),
         }
     }
     let meta = mb.build(formula, has_intercept);
