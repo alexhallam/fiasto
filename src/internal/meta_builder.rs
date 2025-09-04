@@ -121,35 +121,35 @@ use std::collections::HashMap;
 #[derive(Default)]
 pub struct MetaBuilder {
     /// Maps variable names to their unique IDs
-    /// 
+    ///
     /// # Examples
     /// - `"y"` → `1` (response always gets ID 1)
     /// - `"x"` → `2` (first predictor gets ID 2)
     /// - `"group"` → `3` (grouping variable gets ID 3)
     name_to_id: HashMap<String, u32>,
-    
+
     /// Maps variable names to their complete information
-    /// 
+    ///
     /// Contains all variables with their roles, transformations,
     /// interactions, and random effects information.
     columns: HashMap<String, VariableInfo>,
-    
+
     /// Whether the model uses uncorrelated random slopes and intercepts (|| syntax)
-    /// 
+    ///
     /// # Examples
     /// - `true` for `(x || group)` (uncorrelated effects)
     /// - `false` for `(x | group)` (correlated effects)
     has_uncorrelated_slopes_and_intercepts: bool,
-    
+
     /// Whether the model includes any random effects
-    /// 
+    ///
     /// # Examples
     /// - `true` for `y ~ x + (1 | group)`
     /// - `false` for `y ~ x + z`
     is_random_effects_model: bool,
-    
+
     /// The next available ID for new variables
-    /// 
+    ///
     /// Starts at 2 (since response gets ID 1) and increments
     /// for each new variable added.
     next_id: u32,
@@ -645,7 +645,7 @@ impl MetaBuilder {
     /// let mut builder = MetaBuilder::new();
     /// builder.push_response("y");
     /// builder.push_plain_term("x");
-    /// 
+    ///
     /// let metadata = builder.build("y ~ x", true, Some("gaussian".to_string()));
     /// // metadata contains complete variable-centric information
     /// ```

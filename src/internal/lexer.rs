@@ -98,17 +98,17 @@ pub enum Token {
     /// Used for subtraction and intercept suppression
     #[token("-")]
     Minus,
-    
+
     /// Zero: `0`
     /// Used for intercept suppression in random effects
     #[token("0")]
     Zero,
-    
+
     /// One: `1`
     /// Used for intercept terms in random effects
     #[token("1")]
     One,
-    
+
     /// Integer numbers: `2`, `3`, `4`, etc.
     /// Used for polynomial degrees and other numeric parameters
     #[regex(r"[2-9]\d*")]
@@ -123,23 +123,23 @@ pub enum Token {
     /// Boolean true (lowercase): `true`
     #[token("true")]
     True,
-    
+
     /// Boolean true (uppercase): `TRUE`
     #[token("TRUE")]
     TrueUpper,
-    
+
     /// Boolean false (lowercase): `false`
     #[token("false")]
     False,
-    
+
     /// Boolean false (uppercase): `FALSE`
     #[token("FALSE")]
     FalseUpper,
-    
+
     /// Null value (lowercase): `null`
     #[token("null")]
     Null,
-    
+
     /// Null value (uppercase): `NULL`
     #[token("NULL")]
     NullUpper,
@@ -154,7 +154,7 @@ pub enum Token {
     /// Separates response from predictors in formulas
     #[token("~")]
     Tilde,
-    
+
     /// Plus: `+`
     /// Adds terms to the model
     #[token("+")]
@@ -165,7 +165,7 @@ pub enum Token {
     /// Used for correlated random effects grouping
     #[token("|")]
     Pipe,
-    
+
     /// Double pipe: `||`
     /// Used for uncorrelated random effects grouping
     #[token("||")]
@@ -192,7 +192,7 @@ pub enum Token {
     /// Starts function calls and random effects
     #[token("(")]
     FunctionStart,
-    
+
     /// Closing parenthesis: `)`
     /// Ends function calls and random effects
     #[token(")")]
@@ -202,83 +202,83 @@ pub enum Token {
     /// Polynomial transformation: `poly(x, degree)`
     #[token("poly")]
     Poly,
-    
+
     /// Offset term: `offset(x)`
     #[token("offset")]
     Offset,
-    
+
     /// Factor/categorical variable: `factor(x)`
     #[token("factor")]
     Factor,
-    
+
     /// Scaling transformation: `scale(x)`
     #[token("scale")]
     Scale,
-    
+
     /// Standardization: `standardize(x)`
     #[token("standardize")]
     Standardize,
-    
+
     /// Centering transformation: `center(x)`
     #[token("center")]
     Center,
-    
+
     /// Logarithmic transformation: `log(x)`
     #[token("log")]
     Log,
-    
+
     /// B-splines: `bs(x)`
     #[token("bs")]
     BSplines,
-    
+
     /// Gaussian process: `gp(x)`
     #[token("gp")]
     GaussianProcess,
-    
+
     /// Monotonic transformation: `mono(x)`
     #[token("mono")]
     Monotonic,
-    
+
     /// Measurement error: `me(x)`
     #[token("me")]
     MeasurementError,
-    
+
     /// Missing values handling: `mi(x)`
     #[token("mi")]
     MissingValues,
-    
+
     /// Forward fill: `forward_fill(x)`
     #[token("forward_fill")]
     ForwardFill,
-    
+
     /// Backward fill: `backward_fill(x)`
     #[token("backward_fill")]
     BackwardFill,
-    
+
     /// Difference: `diff(x)`
     #[token("diff")]
     Diff,
-    
+
     /// Lag: `lag(x)`
     #[token("lag")]
     Lag,
-    
+
     /// Lead: `lead(x)`
     #[token("lead")]
     Lead,
-    
+
     /// Truncation: `trunc(x)`
     #[token("trunc")]
     Trunc,
-    
+
     /// Weights: `weights(x)`
     #[token("weights")]
     Weights,
-    
+
     /// Trials: `trials(x)`
     #[token("trials")]
     Trials,
-    
+
     /// Censored data: `cens(x)`
     #[token("cens")]
     Censored,
@@ -287,15 +287,15 @@ pub enum Token {
     /// Enhanced grouping: `gr(group, options)`
     #[token("gr")]
     Gr,
-    
+
     /// Multi-membership: `mm(group1, group2)`
     #[token("mm")]
     Mm,
-    
+
     /// Multi-membership with covariates: `mmc(x1, x2)`
     #[token("mmc")]
     Mmc,
-    
+
     /// Category-specific: `cs(1)` or `cs(x)`
     #[token("cs")]
     Cs,
@@ -305,7 +305,7 @@ pub enum Token {
     /// Separates function arguments
     #[token(",")]
     Comma,
-    
+
     /// Equals: `=`
     /// Used for named arguments
     #[token("=")]
@@ -319,11 +319,11 @@ pub enum Token {
     /// Gaussian family: `gaussian`
     #[token("gaussian")]
     Gaussian,
-    
+
     /// Binomial family: `binomial`
     #[token("binomial")]
     Binomial,
-    
+
     /// Poisson family: `poisson`
     #[token("poisson")]
     Poisson,
@@ -332,19 +332,19 @@ pub enum Token {
     /// Correlation control: `cor = TRUE/FALSE`
     #[token("cor")]
     Cor,
-    
+
     /// Grouping ID: `id = "group_id"`
     #[token("id")]
     Id,
-    
+
     /// By variable: `by = NULL` or `by = "variable"`
     #[token("by")]
     By,
-    
+
     /// Covariance control: `cov = TRUE/FALSE`
     #[token("cov")]
     Cov,
-    
+
     /// Distribution: `dist = "student"`
     #[token("dist")]
     Dist,
