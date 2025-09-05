@@ -1,3 +1,9 @@
+# Changelog
+
+## [0.2.2] - 2025-09-05
+
+added `lex_formula` for users to inspect raw lexer output
+
 ## [0.2.1] - 2025-09-04
 
 just to trigger a new release

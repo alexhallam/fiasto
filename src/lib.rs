@@ -299,3 +299,46 @@ pub fn parse_formula(formula: &str) -> Result<Value, Box<dyn std::error::Error>>
 
     Ok(serde_json::to_value(meta)?)
 }
+
+/// Lex a formula and return JSON describing each token.
+///
+/// The output is an array of objects with fields:
+/// - `token`: token name (enum debug)
+/// - `lexeme`: the original slice from the input
+///
+/// # Example
+///
+/// ```rust
+/// use fiasto::lex_formula;
+///
+/// let formula = "mpg ~ cyl + wt*hp + poly(disp, 4) - 1";
+/// let tokens = lex_formula(formula).unwrap();
+/// // tokens is a serde_json::Value::Array of objects like:
+/// // { "token": "ColumnName", "lexeme": "mpg" }
+/// // { "token": "Tilde", "lexeme": "~" }
+/// // { "token": "Plus", "lexeme": "+" }
+/// println!("{}", serde_json::to_string_pretty(&tokens).unwrap());
+/// ```
+pub fn lex_formula(formula: &str) -> Result<Value, Box<dyn std::error::Error>> {
+    use logos::Logos;
+    use crate::internal::lexer::Token;
+
+    let mut lex = Token::lexer(formula);
+    let mut tokens = Vec::new();
+    while let Some(item) = lex.next() {
+        match item {
+            Ok(tok) => {
+                let slice = lex.slice();
+                let obj = serde_json::json!({
+                    "token": format!("{:?}", tok),
+                    "lexeme": slice,
+                });
+                tokens.push(obj);
+            }
+            Err(()) => {
+                return Err(Box::new(crate::internal::errors::ParseError::Lex(lex.slice().to_string())));
+            }
+        }
+    }
+    Ok(serde_json::Value::Array(tokens))
+}

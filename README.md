@@ -247,6 +247,28 @@ let metadata = parse_formula(formula).unwrap();
 println!("{}", serde_json::to_string_pretty(&metadata).unwrap());
 ```
 
+### Inspect Tokens: `lex_formula`
+
+If you want to inspect how the lexer tokenizes a formula (useful when debugging parse errors
+or understanding how functions and interactions are split), use `lex_formula` which returns a
+JSON array of token objects with `token` and `lexeme` fields.
+
+```rust
+use fiasto::lex_formula;
+
+let input = "mpg ~ cyl + wt*hp + poly(disp, 4) - 1";
+let tokens = lex_formula(input).unwrap();
+println!("{}", serde_json::to_string_pretty(&tokens).unwrap());
+```
+
+This prints objects like:
+
+```json
+{ "token": "ColumnName", "lexeme": "mpg" }
+{ "token": "Tilde", "lexeme": "~" }
+{ "token": "Plus", "lexeme": "+" }
+```
+
 ### Basic Formula
 ```rust
 use fiasto::parse_formula;
