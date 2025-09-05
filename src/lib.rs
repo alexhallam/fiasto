@@ -282,7 +282,14 @@ use serde_json::Value;
 /// - Fast pattern matching
 pub fn parse_formula(formula: &str) -> Result<Value, Box<dyn std::error::Error>> {
     let mut p = Parser::new(formula)?;
-    let (response, terms, has_intercept, family_opt) = p.parse_formula()?;
+    let (response, terms, has_intercept, family_opt) = match p.parse_formula() {
+        Ok(v) => v,
+        Err(e) => {
+            // Print pretty, colored error by default for CLI users
+            eprintln!("{}", p.pretty_error(&e));
+            return Err(Box::new(e));
+        }
+    };
 
     let mut mb = MetaBuilder::new();
     mb.push_response(&response);

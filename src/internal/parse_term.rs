@@ -143,7 +143,7 @@ pub fn parse_term<'a>(tokens: &'a [(Token, &'a str)], pos: &mut usize) -> Result
                         | Token::FunctionStart
                 )
             },
-            "Function token or ColumnName",
+            "Function or ColumnName",
         )?;
         if crate::internal::matches::matches(tokens, pos, |t| matches!(t, Token::FunctionStart)) {
             let fname = match tok {
