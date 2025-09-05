@@ -11,14 +11,13 @@
 </p>
 
 ---
-<p align="center">Pronouned like "fiasco", but with a "t" instead of an "c"</p>
+<p align="center">Pronouned like **fiasco**, but with a **t** instead of an **c**</p>
 
 ---
 
 <p align="center">(F)ormulas (I)n (AST) (O)ut</p>
 
-High-performance modern Wilkinson's formula parsing as seen in R/brms/formulaic/formulae. Supports linear
-models and mixed effects models
+A Language-Agnostic modern Wilkinson's formula parser and lexer.
 
 ## ⭕ In Testing
 
@@ -26,28 +25,47 @@ This library is in test and actively changing.
 
 ## Motivation
 
-Formula parsing and materialization are normally done in a single library or package or coupled to a package.
-
-There is nothing wrong with this coupling. I had some personal projects that would benefit from this decoupling the parsing and materialization.
-
-This library was the results. A formula goes in, a json IR comes out.
-
-Technically an AST is not returned. A simplified/structured intermediate representation (IR) in the form of json is returned. This json IR ought to be easy for many language bindings to use.
+Formula parsing and materialization is normally done in a single library. 
+Python, for example, has `patsy`/`formulaic`/`formulae` which all do parsing & materialization.
+R's `model.matrix` also handles formula parsing and design matrix creation.
+There is nothing wrong with this coupling. I wanted to try decoupling the parsing and materialization.
+I thought this would allow a focused library that could be used in multiple languages or dataframe libraries.
+This package has a clear path, to parse and/or lex formulas and return structured JSON metadata.
+Note: Technically an AST is not returned. A simplified/structured intermediate representation (IR) in the form of json is returned. This json IR ought to be easy for many language bindings to use.
 
 ## 🎯 Simple API
-
 The library exposes a clean, focused API:
-
 - `parse_formula()` - Takes a Wilkinson's formula string and returns structured JSON metadata
-- Additional utility functions for working with parsed formulas
-
+- `lex_formula()` - Tokenizes a formula string and returns JSON describing each token
 "Only two functions?! What kind of library is this?!"
-
 An easy to maintain library with a small surface area. The best kind.
 
-Maybe I will also add
+## Output Format
+The parser returns a variable-centric JSON structure where each variable
+is described with its roles, transformations, interactions, and random effects.
+This makes it easy to understand the complete model structure and generate
+appropriate design matrices. [wayne](https://github.com/alexhallam/wayne) is a python package
+that can take this JSON and generates design matrices for use in statistical modeling.
+## Features
+- **Comprehensive Formula Support**: Full R/Wilkinson notation including complex random effects
+- **Variable-Centric Output**: Variables are first-class citizens with detailed metadata
+- **Advanced Random Effects**: brms-style syntax with correlation control and grouping options
+- **High Performance**: Zero-copy processing and efficient tokenization
+- **Pretty Error Messages**: Colored, contextual error reporting with syntax highlighting
+- **Robust Error Recovery**: Graceful handling of malformed formulas with specific error types
+- **Language Agnostic Output**: JSON format for easy integration with various programming languages
+- **Comprehensive Documentation**: Detailed usage examples and grammar rules
+- **Comprehensive Metadata**: Variable roles, transformations, interactions, and relationships
+- **Automatic Naming For Generated Columns**: Consistent, descriptive names for transformed and interaction terms
+- **Dual API**: Both parsing and lexing functions for flexibility
+- **Efficient tokenization**: using one of the fastest lexer generators for Rust ([logos](https://docs.rs/logos/0.15.1/logos/index.html) crate)
+- **Fast pattern matching**: using match statements and enum-based token handling. Rust match statements are zero-cost abstractions.
+- **Minimal string copying**: with extensive use of string slices (`&str`) where possible
 
-`print_canonical_formula()` - Pretty prints the canonical formula.
+## Use Cases:
+
+- **Formula Validation**: Check if formulas are valid against datasets before expensive computation
+- **Cross-Platform Model Specs**: Define models once, implement in multiple statistical frameworks
 
 
 ## Goals
