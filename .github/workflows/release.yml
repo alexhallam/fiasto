@@ -76,8 +76,14 @@ jobs:
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git add Cargo.toml
-          git commit -m "Bump version to ${{ steps.version.outputs.version }}"
-          git push origin main
+          
+          # Only commit if there are changes
+          if git diff --staged --quiet; then
+            echo "No changes to commit - Cargo.toml already at correct version"
+          else
+            git commit -m "Bump version to ${{ steps.version.outputs.version }}"
+            git push origin main
+          fi
           
       - name: Create git tag
         if: steps.tag-check.outputs.exists == 'false'
