@@ -1,5 +1,55 @@
 # Changelog
 
+## [0.2.3] - 2025-09-05
+
+### ✨ Added
+
+- **Enhanced Error Messages**: Added colored, user-friendly error reporting with contextual information
+  - Pretty-printed syntax errors show original formula, successful lexemes (green), and failed lexemes (red)
+  - Clear "Expected Token:" labels with clean token names
+  - Contextual display of parsing progress with colored highlighting using `owo-colors`
+- **Improved Parser Error Context**: Parse errors now include the exact position and context where parsing failed
+
+### 🔧 Improved
+
+- **Error Message Quality**: Cleaned up error messages to show "Function or ColumnName" instead of "Function token or ColumnName"
+- **Code Style**: Eliminated clippy warnings throughout the codebase
+  - Removed unnecessary `to_string()` calls in format strings
+  - Converted instance methods to static methods where appropriate
+  - Removed unnecessary return statements
+  - Fixed redundant pattern matching in examples
+
+### 🐛 Fixed
+
+- **Error Display**: Fixed duplicate and malformed error message formatting
+- **Documentation**: Removed duplicate doc comments and improved consistency
+
+### 📚 Documentation
+
+- **Error Handling**: Updated parser documentation to reflect new pretty error functionality
+- **Examples**: Added comprehensive error testing examples demonstrating colored output
+
+### 🧹 Code Quality
+
+- **Dead Code**: Eliminated all dead code warnings in main library
+- **Clippy Compliance**: Achieved zero clippy warnings for main library code
+- **Performance**: Optimized error formatting to avoid unnecessary string allocations
+
+### 🔄 Internal Changes
+
+- **Error Processing**: Streamlined error handling pipeline to preserve original `ParseError::Unexpected` for better formatting
+- **String Processing**: Improved error message generation to be more efficient and readable
+
+#### Example Output Format:
+```
+Syntax error- Unexpected Token
+Formula: y ~ x +
+Show: y ~ x + <eoi>
+Expected Token: Function or ColumnName
+```
+
+These changes maintain backward compatibility while significantly improving the developer experience when working with formula parsing errors.
+
 ## [0.2.2] - 2025-09-05
 
 added `lex_formula` for users to inspect raw lexer output

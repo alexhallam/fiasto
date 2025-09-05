@@ -1,8 +1,6 @@
 use crate::internal::{ast::Argument, errors::ParseError, lexer::Token};
 
 /// Parses a single argument within a function call.
-
-/// Parses a single argument within a function call.
 ///
 /// This function handles individual arguments that can appear in function calls.
 /// Arguments can be column names (identifiers), integers, or the literal "1".

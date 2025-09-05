@@ -146,7 +146,7 @@ impl<'a> Parser<'a> {
                 out.push_str(&format!("{}\n", failed.red()));
                 
                 // Expected Token: list expected tokens
-                out.push_str(&format!("Expected Token: {}\n", expected.to_string()));
+                out.push_str(&format!("Expected Token: {}\n", expected));
                 
                 out
             }
