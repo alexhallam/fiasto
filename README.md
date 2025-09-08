@@ -11,7 +11,7 @@
 </p>
 
 ---
-<p align="center">Pronouned like **fiasco**, but with a **t** instead of an **c**</p>
+<p align="center">Pronouned like <strong>fiasco</strong>, but with a <strong>t</strong> instead of an <strong>c</strong></p>
 
 ---
 
