@@ -83,12 +83,27 @@ pub fn parse_rhs<'a>(
     // If the token is a minus and a one then it has no intercept
     if crate::internal::matches::matches(tokens, pos, |t| matches!(t, Token::Minus)) {
         if crate::internal::matches::matches(tokens, pos, |t| matches!(t, Token::One)) {
+            // Check if we have an intercept term in the terms list
+            let has_intercept_term = terms.iter().any(|term| matches!(term, crate::internal::ast::Term::Intercept));
+            if has_intercept_term {
+                return Err(crate::internal::errors::ParseError::Syntax(
+                    "cannot have both intercept term and intercept removal (e.g., 'y ~ 1 - 1' is invalid)".into(),
+                ));
+            }
             has_intercept = false;
         } else {
             return Err(crate::internal::errors::ParseError::Syntax(
                 "expected '1' after '-' to remove intercept".into(),
             ));
         }
+    }
+
+    // Validate that zero terms are not combined with other terms
+    let has_zero_term = terms.iter().any(|term| matches!(term, crate::internal::ast::Term::Zero));
+    if has_zero_term && terms.len() > 1 {
+        return Err(crate::internal::errors::ParseError::Syntax(
+            "zero term (0) cannot be combined with other terms (e.g., 'y ~ 0 + 1' is invalid)".into(),
+        ));
     }
 
     Ok((terms, has_intercept))

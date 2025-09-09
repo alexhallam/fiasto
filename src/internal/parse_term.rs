@@ -141,9 +141,11 @@ pub fn parse_term<'a>(tokens: &'a [(Token, &'a str)], pos: &mut usize) -> Result
                         | Token::Mmc
                         | Token::Cs
                         | Token::FunctionStart
+                        | Token::One
+                        | Token::Zero
                 )
             },
-            "Function or ColumnName",
+            "Function, ColumnName, Intercept, or Zero",
         )?;
         if crate::internal::matches::matches(tokens, pos, |t| matches!(t, Token::FunctionStart)) {
             let fname = match tok {
@@ -181,6 +183,14 @@ pub fn parse_term<'a>(tokens: &'a [(Token, &'a str)], pos: &mut usize) -> Result
                     // handled by the loop after atomic term parsing to support
                     // chained interactions like `a*b*c`.
                     Term::Column(name_slice.to_string())
+                }
+                Token::One => {
+                    // Return an intercept term for formulas like `y ~ 1`
+                    Term::Intercept
+                }
+                Token::Zero => {
+                    // Return a zero term for formulas like `y ~ 0` (no intercept)
+                    Term::Zero
                 }
                 Token::Poly => return Err(ParseError::Syntax("expected '(' after 'poly'".into())),
                 Token::Log => return Err(ParseError::Syntax("expected '(' after 'log'".into())),

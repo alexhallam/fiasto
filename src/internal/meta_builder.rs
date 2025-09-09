@@ -393,6 +393,8 @@ impl MetaBuilder {
                 Self::extract_variable_name(left)
             }
             crate::internal::ast::Term::RandomEffect(_) => None,
+            crate::internal::ast::Term::Intercept => None, // Intercept terms don't have variable names
+            crate::internal::ast::Term::Zero => None,      // Zero terms don't have variable names
         }
     }
 

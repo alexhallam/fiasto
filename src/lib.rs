@@ -72,6 +72,35 @@
 //!     Err(e) => eprintln!("Error: {}", e),
 //! }
 //! ```
+//!
+//! ### Intercept-Only and No-Intercept Models
+//!
+//! Both intercept-only and no-intercept models are fully supported:
+//! ```rust
+//! use fiasto::parse_formula;
+//!
+//! // Parse an intercept-only model
+//! let result = parse_formula("y ~ 1");
+//! match result {
+//!     Ok(metadata) => {
+//!         // The metadata will include an "intercept" column
+//!         // and has_intercept will be true
+//!         println!("{}", serde_json::to_string_pretty(&metadata).unwrap());
+//!     }
+//!     Err(e) => eprintln!("Error: {}", e),
+//! }
+//!
+//! // Parse a no-intercept model
+//! let result = parse_formula("y ~ 0");
+//! match result {
+//!     Ok(metadata) => {
+//!         // The metadata will NOT include an "intercept" column
+//!         // and has_intercept will be false
+//!         println!("{}", serde_json::to_string_pretty(&metadata).unwrap());
+//!     }
+//!     Err(e) => eprintln!("Error: {}", e),
+//! }
+//! ```
 //! This prints a JSON object like:
 //!
 //! ```json
@@ -152,7 +181,8 @@
 //! ## Run Examples
 //! You can run the examples in the `examples/` directory with the command: `cargo run --example <example_name>`
 //! For example:
-//! The examples in `03.rs` demonstrates parsing a complex formula shown below. You can run it with `cargo run --example 03`
+//! - `cargo run --example intercept_only` - Demonstrates intercept-only model parsing
+//! - `cargo run --example 03` - Demonstrates parsing a complex formula shown below
 //! ```rust
 //! use fiasto::parse_formula;
 //!
@@ -177,6 +207,8 @@
 //!
 //! ### Basic Models
 //! - Linear models: `y ~ x + z`
+//! - Intercept-only models: `y ~ 1`
+//! - No-intercept models: `y ~ 0`
 //! - Polynomial terms: `y ~ poly(x, 3)`
 //! - Interactions: `y ~ x:z` or `y ~ x*z`
 //! - Family specification: `y ~ x, family = gaussian`
@@ -407,7 +439,7 @@ use serde_json::Value;
 /// - Fast pattern matching
 pub fn parse_formula(formula: &str) -> Result<Value, Box<dyn std::error::Error>> {
     let mut p = Parser::new(formula)?;
-    let (response, terms, has_intercept, family_opt) = match p.parse_formula() {
+    let (response, terms, mut has_intercept, family_opt) = match p.parse_formula() {
         Ok(v) => v,
         Err(e) => {
             // Print pretty, colored error by default for CLI users
@@ -418,12 +450,27 @@ pub fn parse_formula(formula: &str) -> Result<Value, Box<dyn std::error::Error>>
 
     let mut mb = MetaBuilder::new();
     mb.push_response(&response);
+
+    // Check if we have a zero term, which means no intercept
+    let has_zero_term = terms.iter().any(|t| matches!(t, Term::Zero));
+    if has_zero_term {
+        has_intercept = false;
+    }
+
     for t in terms {
         match t {
             Term::Column(name) => mb.push_plain_term(&name),
             Term::Function { name, args } => mb.push_function_term(&name, &args),
             Term::Interaction { left, right } => mb.push_interaction(&left, &right),
             Term::RandomEffect(random_effect) => mb.push_random_effect(&random_effect),
+            Term::Intercept => {
+                // Intercept terms are handled by the has_intercept flag in the build method
+                // No additional processing needed here
+            }
+            Term::Zero => {
+                // Zero terms indicate no intercept - this is handled by the has_intercept flag
+                // No additional processing needed here
+            }
         }
     }
     let family_name = family_opt.map(|f| format!("{:?}", f).to_lowercase());
@@ -662,5 +709,184 @@ mod tests {
         // Check that has_intercept is true
         let metadata = result.get("metadata").expect("Should have metadata");
         assert_eq!(metadata.get("has_intercept").unwrap().as_bool(), Some(true));
+    }
+
+    #[test]
+    fn test_intercept_only_model() {
+        // Test the basic intercept-only model: y ~ 1
+        let formula = "y ~ 1";
+        let result = parse_formula(formula).expect("Should parse successfully");
+
+        // Check that intercept is present
+        let all_columns = result
+            .get("all_generated_columns")
+            .expect("Should have all_generated_columns")
+            .as_array()
+            .expect("Should be an array");
+
+        assert!(
+            all_columns
+                .iter()
+                .any(|col| col.as_str() == Some("intercept")),
+            "Intercept should be present in intercept-only model"
+        );
+
+        // Check the order: y, intercept
+        let expected_columns = vec!["y", "intercept"];
+        let actual_columns: Vec<&str> = all_columns
+            .iter()
+            .map(|col| col.as_str().unwrap())
+            .collect();
+
+        assert_eq!(actual_columns, expected_columns);
+
+        // Check formula order mapping
+        let formula_order = result
+            .get("all_generated_columns_formula_order")
+            .expect("Should have all_generated_columns_formula_order")
+            .as_object()
+            .expect("Should be an object");
+
+        assert_eq!(formula_order.get("1").unwrap().as_str(), Some("y"));
+        assert_eq!(formula_order.get("2").unwrap().as_str(), Some("intercept"));
+
+        // Check that has_intercept is true
+        let metadata = result.get("metadata").expect("Should have metadata");
+        assert_eq!(metadata.get("has_intercept").unwrap().as_bool(), Some(true));
+
+        // Check that only response variable is in columns (no other variables)
+        let columns = result
+            .get("columns")
+            .expect("Should have columns")
+            .as_object()
+            .expect("Should be an object");
+        assert_eq!(
+            columns.len(),
+            1,
+            "Should only have response variable in columns"
+        );
+        assert!(
+            columns.contains_key("y"),
+            "Should have response variable 'y'"
+        );
+    }
+
+    #[test]
+    fn test_intercept_only_model_with_family() {
+        // Test intercept-only model with family specification: y ~ 1, family = gaussian
+        let formula = "y ~ 1, family = gaussian";
+        let result = parse_formula(formula).expect("Should parse successfully");
+
+        // Check that intercept is present
+        let all_columns = result
+            .get("all_generated_columns")
+            .expect("Should have all_generated_columns")
+            .as_array()
+            .expect("Should be an array");
+
+        assert!(
+            all_columns
+                .iter()
+                .any(|col| col.as_str() == Some("intercept")),
+            "Intercept should be present in intercept-only model with family"
+        );
+
+        // Check family is set correctly
+        let metadata = result.get("metadata").expect("Should have metadata");
+        assert_eq!(metadata.get("family").unwrap().as_str(), Some("gaussian"));
+
+        // Check that has_intercept is true
+        assert_eq!(metadata.get("has_intercept").unwrap().as_bool(), Some(true));
+    }
+
+    #[test]
+    fn test_no_intercept_model() {
+        // Test no-intercept model: y ~ 0
+        let formula = "y ~ 0";
+        let result = parse_formula(formula).expect("Should parse successfully");
+
+        // Check that intercept is NOT present
+        let all_columns = result
+            .get("all_generated_columns")
+            .expect("Should have all_generated_columns")
+            .as_array()
+            .expect("Should be an array");
+
+        assert!(
+            !all_columns
+                .iter()
+                .any(|col| col.as_str() == Some("intercept")),
+            "Intercept should NOT be present in y ~ 0 model"
+        );
+
+        // Check the order: just y
+        let expected_columns = vec!["y"];
+        let actual_columns: Vec<&str> = all_columns
+            .iter()
+            .map(|col| col.as_str().unwrap())
+            .collect();
+
+        assert_eq!(actual_columns, expected_columns);
+
+        // Check formula order mapping (should not have intercept)
+        let formula_order = result
+            .get("all_generated_columns_formula_order")
+            .expect("Should have all_generated_columns_formula_order")
+            .as_object()
+            .expect("Should be an object");
+
+        assert_eq!(formula_order.get("1").unwrap().as_str(), Some("y"));
+        assert_eq!(
+            formula_order.len(),
+            1,
+            "Should only have response variable in formula order"
+        );
+
+        // Check that has_intercept is false
+        let metadata = result.get("metadata").expect("Should have metadata");
+        assert_eq!(
+            metadata.get("has_intercept").unwrap().as_bool(),
+            Some(false)
+        );
+    }
+
+    #[test]
+    fn test_invalid_intercept_syntax() {
+        // Test that y ~ 1 - 1 fails (contradictory syntax)
+        let formula = "y ~ 1 - 1";
+        let result = parse_formula(formula);
+
+        assert!(
+            result.is_err(),
+            "y ~ 1 - 1 should fail because it's contradictory syntax"
+        );
+
+        if let Err(e) = result {
+            let error_msg = format!("{}", e);
+            assert!(
+                error_msg.contains("cannot have both intercept term and intercept removal"),
+                "Error should mention contradictory syntax"
+            );
+        }
+    }
+
+    #[test]
+    fn test_invalid_zero_combination() {
+        // Test that y ~ 0 + 1 fails (0 cannot be combined with other terms)
+        let formula = "y ~ 0 + 1";
+        let result = parse_formula(formula);
+
+        assert!(
+            result.is_err(),
+            "y ~ 0 + 1 should fail because 0 cannot be combined with other terms"
+        );
+
+        if let Err(e) = result {
+            let error_msg = format!("{}", e);
+            assert!(
+                error_msg.contains("zero term (0) cannot be combined with other terms"),
+                "Error should mention zero term combination restriction"
+            );
+        }
     }
 }

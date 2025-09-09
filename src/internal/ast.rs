@@ -152,6 +152,20 @@ pub enum Term {
     /// - `(x | group)` → `Term::RandomEffect(RandomEffect{...})`
     /// - `(x || group)` → `Term::RandomEffect(RandomEffect{...})`
     RandomEffect(RandomEffect),
+
+    /// An intercept term
+    ///
+    /// # Examples
+    /// - `1` → `Term::Intercept`
+    /// - Used in formulas like `y ~ 1` for intercept-only models
+    Intercept,
+
+    /// A zero term (no intercept)
+    ///
+    /// # Examples
+    /// - `0` → `Term::Zero`
+    /// - Used in formulas like `y ~ 0` for models without intercept
+    Zero,
 }
 
 /// Arguments to function calls
