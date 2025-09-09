@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.2.5] - 2024-12-19
+
 ### ✨ Added
 
 - **Identity Role for Plain Terms**: Added new `Identity` role to `VariableRole` enum for variables that appear as plain terms in formulas (e.g., `x` in `y ~ x`)
