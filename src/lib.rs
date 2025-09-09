@@ -55,7 +55,7 @@
 //! - **Minimal string copying**: with extensive use of string slices (`&str`) where possible
 //!
 //! ## Use Cases:
-//! 
+//!
 //! - **Formula Validation**: Check if formulas are valid against datasets before expensive computation
 //! - **Cross-Platform Model Specs**: Define models once, implement in multiple statistical frameworks
 //!
@@ -148,28 +148,28 @@
 //! { "token": "Tilde", "lexeme": "~" }
 //! { "token": "Plus", "lexeme": "+" }
 //! ```
-//! 
+//!
 //! ## Run Examples
 //! You can run the examples in the `examples/` directory with the command: `cargo run --example <example_name>`
 //! For example:
 //! The examples in `03.rs` demonstrates parsing a complex formula shown below. You can run it with `cargo run --example 03`
 //! ```rust
 //! use fiasto::parse_formula;
-//! 
+//!
 //! fn main() -> Result<(), Box<dyn std::error::Error>> {
 //!     let input = "y ~ x + poly(x, 2) + poly(x1, 4) + log(x1) - 1, family = gaussian";
-//! 
+//!
 //!     println!("Testing public parse_formula function:");
 //!     println!("Input: {}", input);
-//! 
+//!
 //!     let result = parse_formula(input)?;
-//! 
+//!
 //!     println!("FORMULA METADATA (as JSON):");
 //!     println!("{}", result);
 //!     println!("{}", serde_json::to_string_pretty(&result)?);
-//! 
+//!
 //!     println!("\n\n");
-//! 
+//!
 //!     Ok(())
 //! }
 //! ```
@@ -452,8 +452,8 @@ pub fn parse_formula(formula: &str) -> Result<Value, Box<dyn std::error::Error>>
 /// println!("{}", serde_json::to_string_pretty(&tokens).unwrap());
 /// ```
 pub fn lex_formula(formula: &str) -> Result<Value, Box<dyn std::error::Error>> {
-    use logos::Logos;
     use crate::internal::lexer::Token;
+    use logos::Logos;
 
     let mut lex = Token::lexer(formula);
     let mut tokens = Vec::new();
@@ -468,9 +468,199 @@ pub fn lex_formula(formula: &str) -> Result<Value, Box<dyn std::error::Error>> {
                 tokens.push(obj);
             }
             Err(()) => {
-                return Err(Box::new(crate::internal::errors::ParseError::Lex(lex.slice().to_string())));
+                return Err(Box::new(crate::internal::errors::ParseError::Lex(
+                    lex.slice().to_string(),
+                )));
             }
         }
     }
     Ok(serde_json::Value::Array(tokens))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_intercept_and_formula_order_with_intercept() {
+        // Test the exact example from issue #6: y ~ x + poly(x, 2) + log(z)
+        let formula = "y ~ x + poly(x, 2) + log(z)";
+        let result = parse_formula(formula).expect("Should parse successfully");
+
+        // Check that intercept is present in all_generated_columns
+        let all_columns = result
+            .get("all_generated_columns")
+            .expect("Should have all_generated_columns")
+            .as_array()
+            .expect("Should be an array");
+
+        assert!(
+            all_columns
+                .iter()
+                .any(|col| col.as_str() == Some("intercept")),
+            "Intercept should be present in all_generated_columns"
+        );
+
+        // Check the specific order: y, intercept, x, x_poly_1, x_poly_2, z_log
+        let expected_columns = vec!["y", "intercept", "x", "x_poly_1", "x_poly_2", "z_log"];
+        let actual_columns: Vec<&str> = all_columns
+            .iter()
+            .map(|col| col.as_str().unwrap())
+            .collect();
+
+        assert_eq!(
+            actual_columns, expected_columns,
+            "all_generated_columns should have the correct order"
+        );
+
+        // Check the formula order mapping
+        let formula_order = result
+            .get("all_generated_columns_formula_order")
+            .expect("Should have all_generated_columns_formula_order")
+            .as_object()
+            .expect("Should be an object");
+
+        assert_eq!(formula_order.get("1").unwrap().as_str(), Some("y"));
+        assert_eq!(formula_order.get("2").unwrap().as_str(), Some("intercept"));
+        assert_eq!(formula_order.get("3").unwrap().as_str(), Some("x"));
+        assert_eq!(formula_order.get("4").unwrap().as_str(), Some("x_poly_1"));
+        assert_eq!(formula_order.get("5").unwrap().as_str(), Some("x_poly_2"));
+        assert_eq!(formula_order.get("6").unwrap().as_str(), Some("z_log"));
+
+        // Check that has_intercept is true
+        let metadata = result.get("metadata").expect("Should have metadata");
+        assert_eq!(metadata.get("has_intercept").unwrap().as_bool(), Some(true));
+    }
+
+    #[test]
+    fn test_intercept_and_formula_order_without_intercept() {
+        // Test without intercept: y ~ x + poly(x, 2) + log(z) - 1
+        let formula = "y ~ x + poly(x, 2) + log(z) - 1";
+        let result = parse_formula(formula).expect("Should parse successfully");
+
+        // Check that intercept is NOT present in all_generated_columns
+        let all_columns = result
+            .get("all_generated_columns")
+            .expect("Should have all_generated_columns")
+            .as_array()
+            .expect("Should be an array");
+
+        assert!(
+            !all_columns
+                .iter()
+                .any(|col| col.as_str() == Some("intercept")),
+            "Intercept should NOT be present when has_intercept is false"
+        );
+
+        // Check the specific order: y, x, x_poly_1, x_poly_2, z_log
+        let expected_columns = vec!["y", "x", "x_poly_1", "x_poly_2", "z_log"];
+        let actual_columns: Vec<&str> = all_columns
+            .iter()
+            .map(|col| col.as_str().unwrap())
+            .collect();
+
+        assert_eq!(
+            actual_columns, expected_columns,
+            "all_generated_columns should have the correct order without intercept"
+        );
+
+        // Check the formula order mapping (should not have intercept)
+        let formula_order = result
+            .get("all_generated_columns_formula_order")
+            .expect("Should have all_generated_columns_formula_order")
+            .as_object()
+            .expect("Should be an object");
+
+        assert_eq!(formula_order.get("1").unwrap().as_str(), Some("y"));
+        assert_eq!(formula_order.get("2").unwrap().as_str(), Some("x"));
+        assert_eq!(formula_order.get("3").unwrap().as_str(), Some("x_poly_1"));
+        assert_eq!(formula_order.get("4").unwrap().as_str(), Some("x_poly_2"));
+        assert_eq!(formula_order.get("5").unwrap().as_str(), Some("z_log"));
+
+        // Check that has_intercept is false
+        let metadata = result.get("metadata").expect("Should have metadata");
+        assert_eq!(
+            metadata.get("has_intercept").unwrap().as_bool(),
+            Some(false)
+        );
+    }
+
+    #[test]
+    fn test_simple_formula_with_intercept() {
+        // Test simple formula: y ~ x
+        let formula = "y ~ x";
+        let result = parse_formula(formula).expect("Should parse successfully");
+
+        // Check that intercept is present
+        let all_columns = result
+            .get("all_generated_columns")
+            .expect("Should have all_generated_columns")
+            .as_array()
+            .expect("Should be an array");
+
+        assert!(
+            all_columns
+                .iter()
+                .any(|col| col.as_str() == Some("intercept")),
+            "Intercept should be present in simple formula"
+        );
+
+        // Check the order: y, intercept, x
+        let expected_columns = vec!["y", "intercept", "x"];
+        let actual_columns: Vec<&str> = all_columns
+            .iter()
+            .map(|col| col.as_str().unwrap())
+            .collect();
+
+        assert_eq!(actual_columns, expected_columns);
+
+        // Check formula order mapping
+        let formula_order = result
+            .get("all_generated_columns_formula_order")
+            .expect("Should have all_generated_columns_formula_order")
+            .as_object()
+            .expect("Should be an object");
+
+        assert_eq!(formula_order.get("1").unwrap().as_str(), Some("y"));
+        assert_eq!(formula_order.get("2").unwrap().as_str(), Some("intercept"));
+        assert_eq!(formula_order.get("3").unwrap().as_str(), Some("x"));
+    }
+
+    #[test]
+    fn test_complex_formula_with_intercept() {
+        // Test complex formula with multiple variables and transformations
+        let formula = "y ~ x1 + x2*x3 + poly(x1, 2) + log(z)";
+        let result = parse_formula(formula).expect("Should parse successfully");
+
+        // Check that intercept is present
+        let all_columns = result
+            .get("all_generated_columns")
+            .expect("Should have all_generated_columns")
+            .as_array()
+            .expect("Should be an array");
+
+        assert!(
+            all_columns
+                .iter()
+                .any(|col| col.as_str() == Some("intercept")),
+            "Intercept should be present in complex formula"
+        );
+
+        // Check that intercept is at index 1 (after response)
+        assert_eq!(all_columns[1].as_str(), Some("intercept"));
+
+        // Check formula order mapping starts correctly
+        let formula_order = result
+            .get("all_generated_columns_formula_order")
+            .expect("Should have all_generated_columns_formula_order")
+            .as_object()
+            .expect("Should be an object");
+
+        assert_eq!(formula_order.get("1").unwrap().as_str(), Some("y"));
+        assert_eq!(formula_order.get("2").unwrap().as_str(), Some("intercept"));
+
+        // Check that has_intercept is true
+        let metadata = result.get("metadata").expect("Should have metadata");
+        assert_eq!(metadata.get("has_intercept").unwrap().as_bool(), Some(true));
+    }
 }

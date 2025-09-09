@@ -234,7 +234,7 @@ impl MetaBuilder {
     pub fn add_transformation(&mut self, name: &str, transformation: Transformation) {
         if let Some(var_info) = self.columns.get_mut(name) {
             var_info.transformations.push(transformation.clone());
-            
+
             // If the variable has an Identity role, preserve the original variable name
             // and add the transformation's generated columns
             if var_info.roles.contains(&VariableRole::Identity) {
@@ -670,8 +670,45 @@ impl MetaBuilder {
         let mut sorted_vars: Vec<_> = self.columns.values().collect();
         sorted_vars.sort_by_key(|v| v.id);
 
-        for var in sorted_vars {
+        for var in &sorted_vars {
             all_generated_columns.extend(var.generated_columns.clone());
+        }
+
+        // Add intercept column if has_intercept is true
+        if has_intercept {
+            all_generated_columns.insert(1, "intercept".to_string()); // Insert after response (index 1)
+        }
+
+        // Generate all_generated_columns_formula_order mapping
+        let mut all_generated_columns_formula_order = std::collections::HashMap::new();
+        let mut order_index = 1;
+
+        // Add response variable (always first)
+        if let Some(response_var) = sorted_vars.iter().find(|v| v.id == 1) {
+            if let Some(response_col) = response_var.generated_columns.first() {
+                all_generated_columns_formula_order
+                    .insert(order_index.to_string(), response_col.clone());
+                order_index += 1;
+            }
+        }
+
+        // Add intercept if present
+        if has_intercept {
+            all_generated_columns_formula_order
+                .insert(order_index.to_string(), "intercept".to_string());
+            order_index += 1;
+        }
+
+        // Add all other variables in order
+        for var in &sorted_vars {
+            if var.id != 1 {
+                // Skip response (already added)
+                for col in &var.generated_columns {
+                    all_generated_columns_formula_order
+                        .insert(order_index.to_string(), col.clone());
+                    order_index += 1;
+                }
+            }
         }
 
         crate::internal::data_structures::FormulaMetaData {
@@ -684,6 +721,7 @@ impl MetaBuilder {
             },
             columns: self.columns,
             all_generated_columns,
+            all_generated_columns_formula_order,
         }
     }
 }
