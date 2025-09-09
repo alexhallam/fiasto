@@ -47,9 +47,10 @@ This makes it easy to understand the complete model structure and generate
 appropriate design matrices. [wayne](https://github.com/alexhallam/wayne) is a python package
 that can take this JSON and generates design matrices for use in statistical modeling.
 ## Features
-- **Comprehensive Formula Support**: Full R/Wilkinson notation including complex random effects
+- **Comprehensive Formula Support**: Full R/Wilkinson notation including complex random effects and intercept-only models
 - **Variable-Centric Output**: Variables are first-class citizens with detailed metadata
 - **Advanced Random Effects**: brms-style syntax with correlation control and grouping options
+- **Intercept-Only Models**: Full support for `y ~ 1` formulas with proper metadata generation
 - **High Performance**: Zero-copy processing and efficient tokenization
 - **Pretty Error Messages**: Colored, contextual error reporting with syntax highlighting
 - **Robust Error Recovery**: Graceful handling of malformed formulas with specific error types
@@ -66,6 +67,7 @@ that can take this JSON and generates design matrices for use in statistical mod
 
 - **Formula Validation**: Check if formulas are valid against datasets before expensive computation
 - **Cross-Platform Model Specs**: Define models once, implement in multiple statistical frameworks
+- **Intercept-Only Models**: Support for null models like `y ~ 1` for baseline comparisons
 
 
 ## Goals
@@ -80,22 +82,26 @@ I also offer a clean_name for each parameter. This will all a materializer to us
 
 Polynomials for example would result in names like `x1_poly_1` or `x1_poly_2` as opposed to `[s]^2`. I keep clean_names in camel case.
 
-### 1. Mixed effects models:
+### 1. Intercept-only models:
+
+ `y ~ 1` -> `y ~ 1` (null model with intercept)
+
+### 2. Mixed effects models:
 
  `y ~ x1*x2 + s(z) + (1+x1|1) + (1|g2) - 1` -> `y ~ x1 * x2 + s(z) + (1 + x1 | 1) + (1 | g2) - 1`
 
-### Predict `sigma`:
+### 3. Predict `sigma`:
 
  `y ~ x1*x2 + s(z) + (1+x1|1) + (1|g2), sigma ~ x1 + (1|g2)` -> `y ~ x1 * x2 + s(z) + (1 + x1 | 1) + (1 | g2)` and `sigma ~ x1 + (1 | g2)`
 
-### Non-lienar models: 
+### 4. Non-lienar models: 
 `y ~ a1 - a2^x, a1 + a2 ~ 1, nl = TRUE)`
 
 `y ~ a1 - a2^x`
 `a1 ~ 1`
 `a2 ~ 1`
 
-### predict a1 and a2 differently
+### 5. predict a1 and a2 differently
 
 `y ~ a1 - a2^x, a1 ~ 1, a2 ~ x + (x|g), nl = TRUE)`
 
@@ -104,7 +110,7 @@ Polynomials for example would result in names like `x1_poly_1` or `x1_poly_2` as
 `a2 ~ x + (x | g)`
 
 
-###correlated group-level effects across parameters
+### 6. correlated group-level effects across parameters
 
 `y ~ a1 - a2^x, a1 ~ 1 + (1 |2| g), a2 ~ x + (x |2| g), nl = TRUE)`
 
@@ -112,7 +118,7 @@ Polynomials for example would result in names like `x1_poly_1` or `x1_poly_2` as
 `a1 ~ 1 + (1 | 2 | g)`
 `a2 ~ x + (x | 2 | g)`
 
-### alternative but equivalent way to specify the above model
+### 7. alternative but equivalent way to specify the above model
 
 `y ~ a1 - a2^x, a1 ~ 1 + (1 | gr(g, id = 2)), a2 ~ x + (x | gr(g, id = 2)), nl = TRUE)`
 
@@ -120,7 +126,7 @@ Polynomials for example would result in names like `x1_poly_1` or `x1_poly_2` as
 `a1 ~ 1 + (1 | gr(g, id = 2))`
 `a2 ~ x + (x | gr(g, id = 2))`
 
-### Define a multivariate model
+### 8. Define a multivariate model
 
 `mvbind(y1, y2) ~ x * z + (1|g)`
 
@@ -128,12 +134,12 @@ Polynomials for example would result in names like `x1_poly_1` or `x1_poly_2` as
 `y2 ~ x * z + (1 | g)`
 
 
-### Define a zero-inflated model also predicting the zero-inflation part
+### 9. Define a zero-inflated model also predicting the zero-inflation part
 `y ~ x * z + (1+x|ID1|g), zi ~ x + (1|ID1|g))`
 `y ~ x * z + (1 + x | ID1 | g)`
 `zi ~ x + (1 | ID1 | g)`
 
-### Specify a predictor as monotonic
+### 10. Specify a predictor as monotonic
 `y ~ mo(x) + more_predictors)`
 `y ~ mo(x) + more_predictors`
 
