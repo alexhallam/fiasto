@@ -66,7 +66,7 @@ pub fn parse_rhs<'a>(
     let mut terms = Vec::new();
     let mut has_intercept = true;
 
-    // if the next token is not a comma or plus then it is pushed to the parse_term function
+    // Parse the first term if present (not a comma or plus)
     if crate::internal::peek::peek(tokens, *pos).is_some()
         && !matches!(
             crate::internal::peek::peek(tokens, *pos).unwrap().0,
@@ -75,7 +75,7 @@ pub fn parse_rhs<'a>(
     {
         terms.push(crate::internal::parse_term::parse_term(tokens, pos)?);
     }
-    // If the token is a plus then it is pushed to the parse_term function
+    // Parse additional terms separated by plus signs
     while crate::internal::matches::matches(tokens, pos, |t| matches!(t, Token::Plus)) {
         terms.push(crate::internal::parse_term::parse_term(tokens, pos)?);
     }

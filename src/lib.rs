@@ -1,8 +1,41 @@
 //! # Fiasto: High-Performance Statistical Formula Parser
+//! Pronouned like **fiasco**, but with a **t** instead of an **c**
 //!
-//! Fiasto is a modern, high-performance parser for statistical formulas written in Rust.
-//! It parses R-style formulas (Wilkinson notation) and returns comprehensive metadata
-//! about variables, transformations, interactions, and random effects.
+//! ## (F)ormulas (I)n (AST) (O)ut
+//!
+//! A Language-Agnostic modern Wilkinson's formula parser and lexer.
+//!
+//! ## Motivation
+//!
+//! Formula parsing and materialization is normally done in a single
+//! library. Python, for example, has `patsy`/`formulaic`/`formulae` which all do parsing & materialization.
+//! R's `model.matrix` also handles formula parsing and design matrix creation.
+//!
+//! There is nothing wrong with this coupling. I wanted to try decoupling the parsing and materialization.
+//! I thought this would allow a focused library that could be used in multiple languages or dataframe libraries.
+//! This package has a clear path, to parse and/or lex formulas and return structured JSON metadata.
+//!
+//! Note: Technically an AST is not returned. A simplified/structured intermediate
+//! representation (IR) in the form of json is returned. This json IR ought to be easy for many language bindings to use.
+//!
+//! ## 🎯 Simple API
+//!
+//! The library exposes a clean, focused API:
+//!
+//! - `parse_formula()` - Takes a Wilkinson's formula string and returns structured JSON metadata
+//! - `lex_formula()` - Tokenizes a formula string and returns JSON describing each token
+//!
+//! "Only two functions?! What kind of library is this?!"
+//!
+//! An easy to maintain library with a small surface area. The best kind.
+//!
+//! ## Output Format
+//!
+//! The parser returns a variable-centric JSON structure where each variable
+//! is described with its roles, transformations, interactions, and random effects.
+//! This makes it easy to understand the complete model structure and generate
+//! appropriate design matrices. [wayne](https://github.com/alexhallam/wayne) is a python package
+//! that can take this JSON and generates design matrices for use in statistical modeling.
 //!
 //! ## Features
 //!
@@ -10,10 +43,25 @@
 //! - **Variable-Centric Output**: Variables are first-class citizens with detailed metadata
 //! - **Advanced Random Effects**: brms-style syntax with correlation control and grouping options
 //! - **High Performance**: Zero-copy processing and efficient tokenization
-//! - **Rich Metadata**: Detailed information about transformations, interactions, and model structure
+//! - **Pretty Error Messages**: Colored, contextual error reporting with syntax highlighting
+//! - **Robust Error Recovery**: Graceful handling of malformed formulas with specific error types
+//! - **Language Agnostic Output**: JSON format for easy integration with various programming languages
+//! - **Comprehensive Documentation**: Detailed usage examples and grammar rules
+//! - **Comprehensive Metadata**: Variable roles, transformations, interactions, and relationships
+//! - **Automatic Naming For Generated Columns**: Consistent, descriptive names for transformed and interaction terms
+//! - **Dual API**: Both parsing and lexing functions for flexibility
+//! - **Efficient tokenization**: using one of the fastest lexer generators for Rust ([logos](https://docs.rs/logos/0.15.1/logos/index.html) crate)
+//! - **Fast pattern matching**: using match statements and enum-based token handling. Rust match statements are zero-cost abstractions.
+//! - **Minimal string copying**: with extensive use of string slices (`&str`) where possible
 //!
-//! ## Quick Start
+//! ## Use Cases:
+//! 
+//! - **Formula Validation**: Check if formulas are valid against datasets before expensive computation
+//! - **Cross-Platform Model Specs**: Define models once, implement in multiple statistical frameworks
 //!
+//! ## Quick Start `parse_formula`
+//!
+//! To parse a formula and get JSON metadata:
 //! ```rust
 //! use fiasto::parse_formula;
 //!
@@ -24,7 +72,107 @@
 //!     Err(e) => eprintln!("Error: {}", e),
 //! }
 //! ```
+//! This prints a JSON object like:
 //!
+//! ```json
+//! {
+//!     "all_generated_columns": [
+//!     "y",
+//!     "x",
+//!     "z"
+//!   ],
+//!   "columns": {
+//!     "x": {
+//!       "generated_columns": [
+//!         "x"
+//!       ],
+//!       "id": 2,
+//!       "interactions": [],
+//!       "random_effects": [],
+//!       "roles": [
+//!         "FixedEffect"
+//!       ],
+//!       "transformations": []
+//!     },
+//!     "y": {
+//!       "generated_columns": [
+//!         "y"
+//!       ],
+//!       "id": 1,
+//!       "interactions": [],
+//!       "random_effects": [],
+//!       "roles": [
+//!         "Response"
+//!       ],
+//!       "transformations": []
+//!     },
+//!     "z": {
+//!       "generated_columns": [
+//!         "z"
+//!       ],
+//!       "id": 3,
+//!       "interactions": [],
+//!       "random_effects": [],
+//!       "roles": [
+//!         "FixedEffect"
+//!       ],
+//!       "transformations": []
+//!     }
+//!   },
+//!   "formula": "y ~ x + z",
+//!   "metadata": {
+//!     "family": null,
+//!     "has_intercept": true,
+//!     "has_uncorrelated_slopes_and_intercepts": false,
+//!     "is_random_effects_model": false
+//!   }
+//! }
+//! ```
+//! ## Quick Start `lex_formula`
+//!
+//! To lex a formula and get token information:
+//! ```rust
+//! use fiasto::lex_formula;
+//!
+//! // Lex a simple linear model
+//! let result = lex_formula("y ~ x + z");
+//! match result {
+//!     Ok(tokens) => println!("{}", serde_json::to_string_pretty(&tokens).unwrap()),
+//!     Err(e) => eprintln!("Error: {}", e),
+//! }
+//! ```
+//! This prints objects like:
+//!
+//! ```json
+//! { "token": "ColumnName", "lexeme": "mpg" }
+//! { "token": "Tilde", "lexeme": "~" }
+//! { "token": "Plus", "lexeme": "+" }
+//! ```
+//! 
+//! ## Run Examples
+//! You can run the examples in the `examples/` directory with the command: `cargo run --example <example_name>`
+//! For example:
+//! The examples in `03.rs` demonstrates parsing a complex formula shown below. You can run it with `cargo run --example 03`
+//! ```rust
+//! use fiasto::parse_formula;
+//! 
+//! fn main() -> Result<(), Box<dyn std::error::Error>> {
+//!     let input = "y ~ x + poly(x, 2) + poly(x1, 4) + log(x1) - 1, family = gaussian";
+//! 
+//!     println!("Testing public parse_formula function:");
+//!     println!("Input: {}", input);
+//! 
+//!     let result = parse_formula(input)?;
+//! 
+//!     println!("FORMULA METADATA (as JSON):");
+//!     println!("{}", result);
+//!     println!("{}", serde_json::to_string_pretty(&result)?);
+//! 
+//!     println!("\n\n");
+//! 
+//!     Ok(())
+//! }
+//! ```
 //! ## Supported Syntax
 //!
 //! ### Basic Models
@@ -39,29 +187,6 @@
 //! - Correlated effects: `(x | group)`
 //! - Uncorrelated effects: `(x || group)`
 //! - Advanced grouping: `(1 | gr(group, cor = FALSE))`
-//!
-//! ## Output Format
-//!
-//! The parser returns a variable-centric JSON structure where each variable
-//! is described with its roles, transformations, interactions, and random effects.
-//! This makes it easy to understand the complete model structure and generate
-//! appropriate design matrices.
-//!
-//! ## Performance
-//!
-//! Fiasto is designed for high performance with:
-//! - Efficient tokenization using the `logos` crate
-//! - Zero-copy string processing where possible
-//! - Minimal memory allocations
-//! - Fast pattern matching for complex syntax
-//!
-//! ## Use Cases
-//!
-//! - **Statistical Software**: Integration into statistical computing environments
-//! - **Data Analysis Tools**: Parsing user-specified models
-//! - **Model Validation**: Understanding complex model structures
-//! - **Code Generation**: Creating design matrices from formulas
-//! - **Documentation**: Automatically documenting model specifications
 
 pub mod internal {
     pub mod ast;
@@ -282,7 +407,14 @@ use serde_json::Value;
 /// - Fast pattern matching
 pub fn parse_formula(formula: &str) -> Result<Value, Box<dyn std::error::Error>> {
     let mut p = Parser::new(formula)?;
-    let (response, terms, has_intercept, family_opt) = p.parse_formula()?;
+    let (response, terms, has_intercept, family_opt) = match p.parse_formula() {
+        Ok(v) => v,
+        Err(e) => {
+            // Print pretty, colored error by default for CLI users
+            eprintln!("{}", p.pretty_error(&e));
+            return Err(Box::new(e));
+        }
+    };
 
     let mut mb = MetaBuilder::new();
     mb.push_response(&response);
@@ -298,4 +430,47 @@ pub fn parse_formula(formula: &str) -> Result<Value, Box<dyn std::error::Error>>
     let meta = mb.build(formula, has_intercept, family_name);
 
     Ok(serde_json::to_value(meta)?)
+}
+
+/// Lex a formula and return JSON describing each token.
+///
+/// The output is an array of objects with fields:
+/// - `token`: token name (enum debug)
+/// - `lexeme`: the original slice from the input
+///
+/// # Example
+///
+/// ```rust
+/// use fiasto::lex_formula;
+///
+/// let formula = "mpg ~ cyl + wt*hp + poly(disp, 4) - 1";
+/// let tokens = lex_formula(formula).unwrap();
+/// // tokens is a serde_json::Value::Array of objects like:
+/// // { "token": "ColumnName", "lexeme": "mpg" }
+/// // { "token": "Tilde", "lexeme": "~" }
+/// // { "token": "Plus", "lexeme": "+" }
+/// println!("{}", serde_json::to_string_pretty(&tokens).unwrap());
+/// ```
+pub fn lex_formula(formula: &str) -> Result<Value, Box<dyn std::error::Error>> {
+    use logos::Logos;
+    use crate::internal::lexer::Token;
+
+    let mut lex = Token::lexer(formula);
+    let mut tokens = Vec::new();
+    while let Some(item) = lex.next() {
+        match item {
+            Ok(tok) => {
+                let slice = lex.slice();
+                let obj = serde_json::json!({
+                    "token": format!("{:?}", tok),
+                    "lexeme": slice,
+                });
+                tokens.push(obj);
+            }
+            Err(()) => {
+                return Err(Box::new(crate::internal::errors::ParseError::Lex(lex.slice().to_string())));
+            }
+        }
+    }
+    Ok(serde_json::Value::Array(tokens))
 }

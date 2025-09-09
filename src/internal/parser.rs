@@ -51,6 +51,8 @@ use crate::internal::{
     lexer::Token,
 };
 
+use owo_colors::OwoColorize;
+
 /// Parser for statistical formulas
 ///
 /// The parser converts formula strings into Abstract Syntax Trees (ASTs).
@@ -113,22 +115,63 @@ impl<'a> Parser<'a> {
         crate::internal::new::new(input)
     }
 
+    /// Pretty-print a parse error with context (tokens, last-consumed lexeme, expected/found)
+    ///
+    /// This produces a colored, human-friendly message useful for CLI output.
+    pub fn pretty_error(&self, err: &ParseError) -> String {
+        match err {
+            ParseError::Lex(s) => {
+                format!("{}\n\n{}\n", "Lexing error".red().bold(), s)
+            }
+            ParseError::Eoi => {
+                format!("{}\n\n{}\n", "Unexpected end of input".red().bold(), "the formula ended earlier than expected")
+            }
+            ParseError::Unexpected { expected, found: _ } => {
+                let mut out = String::new();
+                
+                // Header
+                out.push_str(&format!("{}\n", "Syntax error- Unexpected Token".red().bold()));
+                
+                // Formula: just print the original formula uncolored
+                out.push_str(&format!("Formula: {}\n", self.input));
+                
+                // Show: previous successful lexemes in green then failed lexeme in red
+                out.push_str("Show: ");
+                for i in 0..self.pos {
+                    if let Some((_, lex)) = self.tokens.get(i) {
+                        out.push_str(&format!("{} ", lex.green()));
+                    }
+                }
+                let failed = self.tokens.get(self.pos).map(|(_, l)| *l).unwrap_or("<eoi>");
+                out.push_str(&format!("{}\n", failed.red()));
+                
+                // Expected Token: list expected tokens
+                out.push_str(&format!("Expected Token: {}\n", expected));
+                
+                out
+            }
+            ParseError::Syntax(s) => {
+                format!("{}\n\n{}\n", "Syntax error".red().bold(), s)
+            }
+        }
+    }
+
     /// Parses the formula and returns the complete AST information
     ///
     /// This method performs the syntactic analysis of the tokenized formula
-    /// and returns the parsed components.
+    /// and returns the structured representation needed for statistical modeling.
     ///
     /// # Returns
-    ///
+    /// 
     /// A tuple containing:
-    /// * `String` - The response variable name
+    /// * `String` - The response variable (left side of ~)
     /// * `Vec<Term>` - All terms in the formula (fixed effects, random effects, etc.)
     /// * `bool` - Whether the model includes an intercept
     /// * `Option<Family>` - The distribution family (if specified)
     ///
     /// # Examples
-///
-/// ```rust
+    ///
+    /// ```rust
 /// use fiasto::internal::parser::Parser;
 ///
 /// let formula = "y ~ x + (1 | group), family = gaussian";
@@ -142,6 +185,12 @@ impl<'a> Parser<'a> {
     pub fn parse_formula(
         &mut self,
     ) -> Result<(String, Vec<Term>, bool, Option<Family>), ParseError> {
-        crate::internal::parse_formula::parse_formula(&self.tokens, &mut self.pos)
+        match crate::internal::parse_formula::parse_formula(&self.tokens, &mut self.pos) {
+            Ok(v) => Ok(v),
+            Err(e) => {
+                // Return the original error unchanged so pretty_error can handle it properly
+                Err(e)
+            }
+        }
     }
 }

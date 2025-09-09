@@ -324,8 +324,8 @@ impl MetaBuilder {
         right: &crate::internal::ast::Term,
     ) {
         // Extract variable names from the interaction terms
-        let left_name = self.extract_variable_name(left);
-        let right_name = self.extract_variable_name(right);
+        let left_name = Self::extract_variable_name(left);
+        let right_name = Self::extract_variable_name(right);
 
         if let (Some(left_var), Some(right_var)) = (left_name, right_name) {
             // Ensure both variables exist
@@ -366,7 +366,7 @@ impl MetaBuilder {
     }
 
     /// Extracts variable name from a term
-    fn extract_variable_name(&self, term: &crate::internal::ast::Term) -> Option<String> {
+    fn extract_variable_name(term: &crate::internal::ast::Term) -> Option<String> {
         match term {
             crate::internal::ast::Term::Column(name) => Some(name.clone()),
             crate::internal::ast::Term::Function { name: _name, args } => {
@@ -381,7 +381,7 @@ impl MetaBuilder {
                 right: _right,
             } => {
                 // For nested interactions, we'll use the left side for now
-                self.extract_variable_name(left)
+                Self::extract_variable_name(left)
             }
             crate::internal::ast::Term::RandomEffect(_) => None,
         }

@@ -225,9 +225,9 @@ fn parse_correlation_type<'a>(
                     Some(id_slice.to_string()),
                 ))
             } else {
-                return Err(ParseError::Syntax(
+                Err(ParseError::Syntax(
                     "expected second '|' after correlation ID".into(),
-                ));
+                ))
             }
         } else {
             Ok((CorrelationType::Correlated, None))
