@@ -98,6 +98,13 @@ pub enum VariableRole {
     /// - `subject` in `(x | subject)`
     /// - `site` in `(1 | site)`
     GroupingVariable,
+
+    /// A variable used in its raw form without any transformation
+    ///
+    /// # Examples
+    /// - `x1` in `y ~ x1 + poly(x1, 2)` (x1 appears both as identity and in poly)
+    /// - `x` in `y ~ x + log(x)` (x appears both as identity and in log)
+    Identity,
 }
 
 /// A transformation applied to a variable
