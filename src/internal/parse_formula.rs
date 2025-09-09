@@ -1,27 +1,32 @@
-use crate::internal::{ast::{Family, Term}, errors::ParseError, lexer::Token};
+use crate::internal::{
+    ast::{Family, Response, Term},
+    errors::ParseError,
+    lexer::Token,
+};
 
 /// Parses a complete formula and returns its components.
-/// 
+///
 /// This is the main entry point for parsing R-style formulas. It orchestrates
 /// the parsing of all formula components: response variable, right-hand side terms,
 /// intercept flag, and optional family specification.
-/// 
+///
 /// # Arguments
 /// * `tokens` - Reference to the vector of tokens
 /// * `pos` - Mutable reference to the current position (will be advanced)
-/// 
+///
 /// # Returns
-/// * `Result<(String, Vec<Term>, bool, Option<Family>), ParseError>` - A tuple containing:
-///   - Response variable name
+/// * `Result<(Response, Vec<Term>, bool, Option<Family>), ParseError>` - A tuple containing:
+///   - Response variable(s) specification
 ///   - Vector of terms from the right-hand side
 ///   - Boolean indicating whether intercept is included
 ///   - Optional family specification
-/// 
+///
 /// # Example
 /// ```
 /// use fiasto::internal::parse_formula::parse_formula;
 /// use fiasto::internal::lexer::Token;
-/// 
+/// use fiasto::internal::ast::Response;
+///
 /// let tokens = vec![
 ///     (Token::ColumnName, "y"),
 ///     (Token::Tilde, "~"),
@@ -34,44 +39,48 @@ use crate::internal::{ast::{Family, Term}, errors::ParseError, lexer::Token};
 ///     (Token::Gaussian, "gaussian")
 /// ];
 /// let mut pos = 0;
-/// 
+///
 /// let result = parse_formula(&tokens, &mut pos);
 /// assert!(result.is_ok());
 /// let (response, terms, has_intercept, family) = result.unwrap();
-/// assert_eq!(response, "y");
+/// match response {
+///     Response::Single(name) => assert_eq!(name, "y"),
+///     _ => panic!("Expected single response")
+/// }
 /// assert_eq!(terms.len(), 2);
 /// assert!(has_intercept);
 /// assert!(family.is_some());
 /// ```
-/// 
+///
 /// # How it works
 /// 1. Parses the response variable using `parse_response`
 /// 2. Expects and consumes a tilde (`~`) symbol
 /// 3. Parses the right-hand side using `parse_rhs`
 /// 4. Optionally parses family specification if comma is present
-/// 
+///
 /// # Grammar Rule
 /// ```text
 /// formula = response "~" rhs ["," family_spec]
-/// response = column_name
+/// response = column_name | bind(column_name, ...)
 /// rhs = term_list [intercept_spec]
 /// family_spec = "family" "=" family_name
 /// ```
-/// 
+///
 /// # Use Cases
 /// - Parsing complete regression formulas
 /// - Extracting all components of a statistical model specification
 /// - Validating formula syntax and structure
 /// - Preparing for model building and metadata generation
-/// 
+///
 /// # Examples of Valid Inputs
-/// - `"y ~ x"` → response="y", terms=["x"], intercept=true, family=None
-/// - `"y ~ x + z - 1"` → response="y", terms=["x", "z"], intercept=false, family=None
-/// - `"y ~ x, family=gaussian"` → response="y", terms=["x"], intercept=true, family=Gaussian
+/// - `"y ~ x"` → response=Single("y"), terms=["x"], intercept=true, family=None
+/// - `"bind(y1, y2) ~ x"` → response=Multivariate(["y1", "y2"]), terms=["x"], intercept=true, family=None
+/// - `"y ~ x + z - 1"` → response=Single("y"), terms=["x", "z"], intercept=false, family=None
+/// - `"y ~ x, family=gaussian"` → response=Single("y"), terms=["x"], intercept=true, family=Gaussian
 pub fn parse_formula<'a>(
     tokens: &'a [(Token, &'a str)],
     pos: &mut usize,
-) -> Result<(String, Vec<Term>, bool, Option<Family>), ParseError> {
+) -> Result<(Response, Vec<Term>, bool, Option<Family>), ParseError> {
     let response = crate::internal::parse_response::parse_response(tokens, pos)?;
     crate::internal::expect::expect(tokens, pos, |t| matches!(t, Token::Tilde), "~")?;
     let (terms, has_intercept) = crate::internal::parse_rhs::parse_rhs(tokens, pos)?;
@@ -96,14 +105,17 @@ mod tests {
         let tokens = vec![
             (Token::ColumnName, "y"),
             (Token::Tilde, "~"),
-            (Token::ColumnName, "x")
+            (Token::ColumnName, "x"),
         ];
         let mut pos = 0;
-        
+
         let result = parse_formula(&tokens, &mut pos);
         assert!(result.is_ok());
         let (response, terms, has_intercept, family) = result.unwrap();
-        assert_eq!(response, "y");
+        match response {
+            Response::Single(name) => assert_eq!(name, "y"),
+            _ => panic!("Expected single response"),
+        }
         assert_eq!(terms.len(), 1);
         assert!(has_intercept);
         assert!(family.is_none());
@@ -116,14 +128,17 @@ mod tests {
             (Token::Tilde, "~"),
             (Token::ColumnName, "x"),
             (Token::Plus, "+"),
-            (Token::ColumnName, "z")
+            (Token::ColumnName, "z"),
         ];
         let mut pos = 0;
-        
+
         let result = parse_formula(&tokens, &mut pos);
         assert!(result.is_ok());
         let (response, terms, has_intercept, family) = result.unwrap();
-        assert_eq!(response, "y");
+        match response {
+            Response::Single(name) => assert_eq!(name, "y"),
+            _ => panic!("Expected single response"),
+        }
         assert_eq!(terms.len(), 2);
         assert!(has_intercept);
         assert!(family.is_none());
@@ -136,14 +151,17 @@ mod tests {
             (Token::Tilde, "~"),
             (Token::ColumnName, "x"),
             (Token::Minus, "-"),
-            (Token::One, "1")
+            (Token::One, "1"),
         ];
         let mut pos = 0;
-        
+
         let result = parse_formula(&tokens, &mut pos);
         assert!(result.is_ok());
         let (response, terms, has_intercept, family) = result.unwrap();
-        assert_eq!(response, "y");
+        match response {
+            Response::Single(name) => assert_eq!(name, "y"),
+            _ => panic!("Expected single response"),
+        }
         assert_eq!(terms.len(), 1);
         assert!(!has_intercept);
         assert!(family.is_none());
@@ -158,14 +176,17 @@ mod tests {
             (Token::Comma, ","),
             (Token::Family, "family"),
             (Token::Equal, "="),
-            (Token::Gaussian, "gaussian")
+            (Token::Gaussian, "gaussian"),
         ];
         let mut pos = 0;
-        
+
         let result = parse_formula(&tokens, &mut pos);
         assert!(result.is_ok());
         let (response, terms, has_intercept, family) = result.unwrap();
-        assert_eq!(response, "y");
+        match response {
+            Response::Single(name) => assert_eq!(name, "y"),
+            _ => panic!("Expected single response"),
+        }
         assert_eq!(terms.len(), 1);
         assert!(has_intercept);
         assert!(family.is_some());
@@ -174,12 +195,9 @@ mod tests {
 
     #[test]
     fn test_parse_formula_failure_missing_tilde() {
-        let tokens = vec![
-            (Token::ColumnName, "y"),
-            (Token::ColumnName, "x")
-        ];
+        let tokens = vec![(Token::ColumnName, "y"), (Token::ColumnName, "x")];
         let mut pos = 0;
-        
+
         let result = parse_formula(&tokens, &mut pos);
         assert!(result.is_err());
         assert_eq!(pos, 1); // Position advanced past response
@@ -191,10 +209,10 @@ mod tests {
             (Token::ColumnName, "y"),
             (Token::Tilde, "~"),
             (Token::ColumnName, "x"),
-            (Token::Comma, ",")
+            (Token::Comma, ","),
         ];
         let mut pos = 0;
-        
+
         let result = parse_formula(&tokens, &mut pos);
         assert!(result.is_err());
         assert_eq!(pos, 4); // Position advanced to comma
@@ -210,14 +228,17 @@ mod tests {
             (Token::ColumnName, "x"),
             (Token::Comma, ","),
             (Token::Integer, "2"),
-            (Token::FunctionEnd, ")")
+            (Token::FunctionEnd, ")"),
         ];
         let mut pos = 0;
-        
+
         let result = parse_formula(&tokens, &mut pos);
         assert!(result.is_ok());
         let (response, terms, has_intercept, family) = result.unwrap();
-        assert_eq!(response, "y");
+        match response {
+            Response::Single(name) => assert_eq!(name, "y"),
+            _ => panic!("Expected single response"),
+        }
         assert_eq!(terms.len(), 1);
         assert!(has_intercept);
         assert!(family.is_none());
@@ -225,16 +246,16 @@ mod tests {
 
     #[test]
     fn test_parse_formula_empty_rhs() {
-        let tokens = vec![
-            (Token::ColumnName, "y"),
-            (Token::Tilde, "~")
-        ];
+        let tokens = vec![(Token::ColumnName, "y"), (Token::Tilde, "~")];
         let mut pos = 0;
-        
+
         let result = parse_formula(&tokens, &mut pos);
         assert!(result.is_ok());
         let (response, terms, has_intercept, family) = result.unwrap();
-        assert_eq!(response, "y");
+        match response {
+            Response::Single(name) => assert_eq!(name, "y"),
+            _ => panic!("Expected single response"),
+        }
         assert_eq!(terms.len(), 0);
         assert!(has_intercept);
         assert!(family.is_none());

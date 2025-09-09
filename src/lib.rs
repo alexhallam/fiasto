@@ -73,9 +73,9 @@
 //! }
 //! ```
 //!
-//! ### Intercept-Only and No-Intercept Models
+//! ### Intercept-Only, No-Intercept, and Multivariate Models
 //!
-//! Both intercept-only and no-intercept models are fully supported:
+//! All model types are fully supported:
 //! ```rust
 //! use fiasto::parse_formula;
 //!
@@ -96,6 +96,17 @@
 //!     Ok(metadata) => {
 //!         // The metadata will NOT include an "intercept" column
 //!         // and has_intercept will be false
+//!         println!("{}", serde_json::to_string_pretty(&metadata).unwrap());
+//!     }
+//!     Err(e) => eprintln!("Error: {}", e),
+//! }
+//!
+//! // Parse a multivariate model
+//! let result = parse_formula("bind(y1, y2) ~ x + z");
+//! match result {
+//!     Ok(metadata) => {
+//!         // The metadata will include both y1 and y2 as response variables
+//!         // with ID 1, and x, z as predictors with IDs 2, 3
 //!         println!("{}", serde_json::to_string_pretty(&metadata).unwrap());
 //!     }
 //!     Err(e) => eprintln!("Error: {}", e),
@@ -209,6 +220,7 @@
 //! - Linear models: `y ~ x + z`
 //! - Intercept-only models: `y ~ 1`
 //! - No-intercept models: `y ~ 0`
+//! - Multivariate models: `bind(y1, y2) ~ x + z`
 //! - Polynomial terms: `y ~ poly(x, 3)`
 //! - Interactions: `y ~ x:z` or `y ~ x*z`
 //! - Family specification: `y ~ x, family = gaussian`
@@ -886,6 +898,121 @@ mod tests {
             assert!(
                 error_msg.contains("zero term (0) cannot be combined with other terms"),
                 "Error should mention zero term combination restriction"
+            );
+        }
+    }
+
+    #[test]
+    fn test_multivariate_response_basic() {
+        // Test basic multivariate response: bind(y1, y2) ~ x
+        let formula = "bind(y1, y2) ~ x";
+        let result = parse_formula(formula).expect("Should parse successfully");
+
+        // Check that both response variables are present
+        let columns = result
+            .get("columns")
+            .expect("Should have columns")
+            .as_object()
+            .expect("Should be an object");
+
+        assert!(columns.contains_key("y1"), "Should contain y1 response variable");
+        assert!(columns.contains_key("y2"), "Should contain y2 response variable");
+
+        // Check that both have Response role
+        let y1_info = columns.get("y1").expect("Should have y1");
+        let y1_roles = y1_info.get("roles").expect("Should have roles").as_array().expect("Should be array");
+        assert!(y1_roles.iter().any(|r| r.as_str() == Some("Response")), "y1 should have Response role");
+
+        let y2_info = columns.get("y2").expect("Should have y2");
+        let y2_roles = y2_info.get("roles").expect("Should have roles").as_array().expect("Should be array");
+        assert!(y2_roles.iter().any(|r| r.as_str() == Some("Response")), "y2 should have Response role");
+
+        // Check that both have ID 1 (response variables)
+        assert_eq!(y1_info.get("id").expect("Should have id").as_u64(), Some(1));
+        assert_eq!(y2_info.get("id").expect("Should have id").as_u64(), Some(1));
+
+        // Check generated columns include both response variables
+        let all_columns = result
+            .get("all_generated_columns")
+            .expect("Should have all_generated_columns")
+            .as_array()
+            .expect("Should be an array");
+
+        let column_names: Vec<&str> = all_columns
+            .iter()
+            .map(|col| col.as_str().unwrap())
+            .collect();
+
+        assert!(column_names.contains(&"y1"), "Should contain y1 in generated columns");
+        assert!(column_names.contains(&"y2"), "Should contain y2 in generated columns");
+        assert!(column_names.contains(&"x"), "Should contain x in generated columns");
+        assert!(column_names.contains(&"intercept"), "Should contain intercept in generated columns");
+    }
+
+    #[test]
+    fn test_multivariate_response_three_variables() {
+        // Test multivariate response with 3 variables: bind(y1, y2, y3) ~ x + z
+        let formula = "bind(y1, y2, y3) ~ x + z";
+        let result = parse_formula(formula).expect("Should parse successfully");
+
+        // Check that all three response variables are present
+        let columns = result
+            .get("columns")
+            .expect("Should have columns")
+            .as_object()
+            .expect("Should be an object");
+
+        for var_name in &["y1", "y2", "y3"] {
+            assert!(columns.contains_key(*var_name), "Should contain {} response variable", var_name);
+            
+            let var_info = columns.get(*var_name).expect(&format!("Should have {}", var_name));
+            let roles = var_info.get("roles").expect("Should have roles").as_array().expect("Should be array");
+            assert!(roles.iter().any(|r| r.as_str() == Some("Response")), "{} should have Response role", var_name);
+            assert_eq!(var_info.get("id").expect("Should have id").as_u64(), Some(1));
+        }
+
+        // Check that predictor variables have correct IDs (starting from 2)
+        let x_info = columns.get("x").expect("Should have x");
+        let z_info = columns.get("z").expect("Should have z");
+        assert_eq!(x_info.get("id").expect("Should have id").as_u64(), Some(2));
+        assert_eq!(z_info.get("id").expect("Should have id").as_u64(), Some(3));
+    }
+
+    #[test]
+    fn test_multivariate_response_with_family() {
+        // Test multivariate response with family: bind(y1, y2) ~ x, family = gaussian
+        let formula = "bind(y1, y2) ~ x, family = gaussian";
+        let result = parse_formula(formula).expect("Should parse successfully");
+
+        // Check family is set correctly
+        let metadata = result.get("metadata").expect("Should have metadata");
+        assert_eq!(metadata.get("family").expect("Should have family").as_str(), Some("gaussian"));
+
+        // Check that both response variables are present
+        let columns = result
+            .get("columns")
+            .expect("Should have columns")
+            .as_object()
+            .expect("Should be an object");
+
+        assert!(columns.contains_key("y1"), "Should contain y1 response variable");
+        assert!(columns.contains_key("y2"), "Should contain y2 response variable");
+        assert!(columns.contains_key("x"), "Should contain x predictor variable");
+    }
+
+    #[test]
+    fn test_multivariate_response_invalid_single_variable() {
+        // Test that bind() with only one variable fails
+        let formula = "bind(y1) ~ x";
+        let result = parse_formula(formula);
+
+        assert!(result.is_err(), "bind() with single variable should fail");
+
+        if let Err(e) = result {
+            let error_msg = format!("{}", e);
+            assert!(
+                error_msg.contains("bind() requires at least 2 variables"),
+                "Error should mention bind() requires at least 2 variables"
             );
         }
     }

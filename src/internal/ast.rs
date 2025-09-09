@@ -78,6 +78,22 @@ pub enum Family {
     Poisson,
 }
 
+/// Response variable specification
+///
+/// Represents either a single response variable or multiple response variables
+/// bound together for multivariate models.
+///
+/// # Examples
+/// - `y` → `Response::Single("y")`
+/// - `bind(y1, y2)` → `Response::Multivariate(vec!["y1", "y2"])`
+#[derive(Debug, Clone, PartialEq)]
+pub enum Response {
+    /// Single response variable
+    Single(String),
+    /// Multiple response variables bound together
+    Multivariate(Vec<String>),
+}
+
 /// A term in a statistical formula
 ///
 /// Terms represent the building blocks of statistical formulas. They can be
