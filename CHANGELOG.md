@@ -7,7 +7,7 @@
 - **Identity Role for Plain Terms**: Added new `Identity` role to `VariableRole` enum for variables that appear as plain terms in formulas (e.g., `x` in `y ~ x`)
 - **Intercept Column Support**: Added automatic inclusion of `"intercept"` column in `all_generated_columns` when `has_intercept` is true
 - **Formula Order Mapping**: Added new `all_generated_columns_formula_order` field that maps formula order (1, 2, 3...) to column names
-- **Intercept-Only Model Support**: Added support for intercept-only models like `y ~ 1` with new `Term::Intercept` variant
+- **Intercept-Only Model Support**: Added support for intercept-only models like `y ~ 1` and no-intercept models like `y ~ 0` with new `Term::Intercept` and `Term::Zero` variants
 - **Comprehensive Test Suite**: Added 7 new unit tests to verify intercept handling, formula order mapping, and intercept-only model functionality
 
 ### 🔧 Improved
@@ -18,7 +18,7 @@
 
 ### 🐛 Fixed
 
-- **Issue #1**: Fixed intercept-only model parsing by adding support for `y ~ 1` formulas
+- **Issue #1**: Fixed intercept-only model parsing by adding support for `y ~ 1` and `y ~ 0` formulas
 - **Issue #4**: Fixed plain terms not receiving proper `Identity` role when appearing alone in formulas
 - **Issue #6**: Fixed missing intercept column in `all_generated_columns` and added formula order mapping
 
@@ -27,13 +27,14 @@
 - **Unit Test Coverage**: Added comprehensive test coverage for intercept, formula order, and intercept-only model functionality
 - **Regression Prevention**: Tests ensure intercept is present when `has_intercept` is true and absent when false
 - **Order Validation**: Tests verify correct column ordering in both `all_generated_columns` and `all_generated_columns_formula_order`
-- **Intercept-Only Models**: Tests verify `y ~ 1` formulas work correctly with proper metadata generation
-- **Error Handling**: Tests verify invalid syntax like `y ~ 0 + 1` fails appropriately
+- **Intercept-Only Models**: Tests verify `y ~ 1` and `y ~ 0` formulas work correctly with proper metadata generation
+- **Error Handling**: Tests verify invalid syntax like `y ~ 1 - 1` and `y ~ 0 + 1` fails appropriately
 
 ### 🔄 Internal Changes
 
-- **AST Enhancement**: Added new `Term::Intercept` variant to support intercept-only models
-- **Parser Updates**: Enhanced `parse_term()` to recognize `Token::One` as a valid intercept term
+- **AST Enhancement**: Added new `Term::Intercept` and `Term::Zero` variants to support intercept-only and no-intercept models
+- **Parser Updates**: Enhanced `parse_term()` to recognize `Token::One` and `Token::Zero` as valid terms
+- **Syntax Validation**: Added validation to prevent contradictory syntax like `y ~ 1 - 1` and invalid combinations like `y ~ 0 + 1`
 - **MetaBuilder Enhancement**: Updated `build()` method to handle intercept insertion and formula order mapping
 - **Data Structure Updates**: Enhanced `FormulaMetaData` struct with new `all_generated_columns_formula_order` field
 - **Role Management**: Improved role assignment logic in `push_plain_term()` and `add_transformation()` methods

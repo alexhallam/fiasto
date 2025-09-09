@@ -73,9 +73,9 @@
 //! }
 //! ```
 //!
-//! ### Intercept-Only Models
+//! ### Intercept-Only and No-Intercept Models
 //!
-//! Intercept-only models are fully supported:
+//! Both intercept-only and no-intercept models are fully supported:
 //! ```rust
 //! use fiasto::parse_formula;
 //!
@@ -85,6 +85,17 @@
 //!     Ok(metadata) => {
 //!         // The metadata will include an "intercept" column
 //!         // and has_intercept will be true
+//!         println!("{}", serde_json::to_string_pretty(&metadata).unwrap());
+//!     }
+//!     Err(e) => eprintln!("Error: {}", e),
+//! }
+//!
+//! // Parse a no-intercept model
+//! let result = parse_formula("y ~ 0");
+//! match result {
+//!     Ok(metadata) => {
+//!         // The metadata will NOT include an "intercept" column
+//!         // and has_intercept will be false
 //!         println!("{}", serde_json::to_string_pretty(&metadata).unwrap());
 //!     }
 //!     Err(e) => eprintln!("Error: {}", e),
@@ -197,6 +208,7 @@
 //! ### Basic Models
 //! - Linear models: `y ~ x + z`
 //! - Intercept-only models: `y ~ 1`
+//! - No-intercept models: `y ~ 0`
 //! - Polynomial terms: `y ~ poly(x, 3)`
 //! - Interactions: `y ~ x:z` or `y ~ x*z`
 //! - Family specification: `y ~ x, family = gaussian`
@@ -438,13 +450,13 @@ pub fn parse_formula(formula: &str) -> Result<Value, Box<dyn std::error::Error>>
 
     let mut mb = MetaBuilder::new();
     mb.push_response(&response);
-    
+
     // Check if we have a zero term, which means no intercept
     let has_zero_term = terms.iter().any(|t| matches!(t, Term::Zero));
     if has_zero_term {
         has_intercept = false;
     }
-    
+
     for t in terms {
         match t {
             Term::Column(name) => mb.push_plain_term(&name),

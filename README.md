@@ -50,7 +50,7 @@ that can take this JSON and generates design matrices for use in statistical mod
 - **Comprehensive Formula Support**: Full R/Wilkinson notation including complex random effects and intercept-only models
 - **Variable-Centric Output**: Variables are first-class citizens with detailed metadata
 - **Advanced Random Effects**: brms-style syntax with correlation control and grouping options
-- **Intercept-Only Models**: Full support for `y ~ 1` formulas with proper metadata generation
+- **Intercept-Only Models**: Full support for `y ~ 1` and `y ~ 0` formulas with proper metadata generation
 - **High Performance**: Zero-copy processing and efficient tokenization
 - **Pretty Error Messages**: Colored, contextual error reporting with syntax highlighting
 - **Robust Error Recovery**: Graceful handling of malformed formulas with specific error types
@@ -67,7 +67,7 @@ that can take this JSON and generates design matrices for use in statistical mod
 
 - **Formula Validation**: Check if formulas are valid against datasets before expensive computation
 - **Cross-Platform Model Specs**: Define models once, implement in multiple statistical frameworks
-- **Intercept-Only Models**: Support for null models like `y ~ 1` for baseline comparisons
+- **Intercept-Only Models**: Support for null models like `y ~ 1` and `y ~ 0` for baseline comparisons
 
 
 ## Goals
@@ -82,9 +82,10 @@ I also offer a clean_name for each parameter. This will all a materializer to us
 
 Polynomials for example would result in names like `x1_poly_1` or `x1_poly_2` as opposed to `[s]^2`. I keep clean_names in camel case.
 
-### 1. Intercept-only models:
+### 1. Intercept-only and no-intercept models:
 
  `y ~ 1` -> `y ~ 1` (null model with intercept)
+ `y ~ 0` -> `y ~ 0` (null model without intercept)
 
 ### 2. Mixed effects models:
 
