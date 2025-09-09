@@ -46,7 +46,7 @@
 //! - Missing required arguments
 
 use crate::internal::{
-    ast::{Family, Term},
+    ast::{Family, Response, Term},
     errors::ParseError,
     lexer::Token,
 };
@@ -173,18 +173,22 @@ impl<'a> Parser<'a> {
     ///
     /// ```rust
 /// use fiasto::internal::parser::Parser;
+/// use fiasto::internal::ast::Response;
 ///
 /// let formula = "y ~ x + (1 | group), family = gaussian";
 /// let mut parser = Parser::new(formula).unwrap();
 /// let (response, terms, has_intercept, family) = parser.parse_formula().unwrap();
 /// 
-/// assert_eq!(response, "y");
+/// match response {
+///     Response::Single(name) => assert_eq!(name, "y"),
+///     _ => panic!("Expected single response")
+/// }
 /// assert!(has_intercept);
 /// assert!(family.is_some());
 /// ```
     pub fn parse_formula(
         &mut self,
-    ) -> Result<(String, Vec<Term>, bool, Option<Family>), ParseError> {
+    ) -> Result<(Response, Vec<Term>, bool, Option<Family>), ParseError> {
         match crate::internal::parse_formula::parse_formula(&self.tokens, &mut self.pos) {
             Ok(v) => Ok(v),
             Err(e) => {

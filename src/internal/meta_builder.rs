@@ -30,12 +30,12 @@
 //!
 //! ```rust
 //! use fiasto::internal::meta_builder::MetaBuilder;
-//! use fiasto::internal::ast::{Term, Argument, RandomEffect, Grouping, CorrelationType};
+//! use fiasto::internal::ast::{Term, Argument, RandomEffect, Grouping, CorrelationType, Response};
 //!
 //! let mut builder = MetaBuilder::new();
 //!
 //! // Add response variable
-//! builder.push_response("y");
+//! builder.push_response(&Response::Single("y".to_string()));
 //!
 //! // Add fixed effect
 //! builder.push_plain_term("x");
@@ -93,7 +93,7 @@
 //! ```
 
 use super::{
-    ast::{Argument, Grouping, RandomEffect, RandomTerm},
+    ast::{Argument, Grouping, RandomEffect, RandomTerm, Response},
     data_structures::{
         FormulaMetadataInfo, Interaction, RandomEffectInfo, Transformation, VariableInfo,
         VariableRole,
@@ -112,9 +112,10 @@ use std::collections::HashMap;
 ///
 /// ```rust
 /// use fiasto::internal::meta_builder::MetaBuilder;
+/// use fiasto::internal::ast::Response;
 ///
 /// let mut builder = MetaBuilder::new();
-/// builder.push_response("y");
+/// builder.push_response(&Response::Single("y".to_string()));
 /// builder.push_plain_term("x");
 /// let metadata = builder.build("y ~ x", true, None);
 /// ```
@@ -262,43 +263,74 @@ impl MetaBuilder {
         }
     }
 
-    /// Adds a response variable (always gets ID 1)
+    /// Adds response variable(s) to the model
     ///
-    /// The response variable is always assigned ID 1, and all other variables
-    /// will be assigned IDs starting from 2. This ensures consistent ordering
-    /// in the output metadata.
+    /// For single responses, the variable gets ID 1. For multivariate responses,
+    /// all response variables get ID 1 and are treated as a single response unit.
+    /// All other variables will be assigned IDs starting from 2.
     ///
     /// # Arguments
     ///
-    /// * `name` - The name of the response variable
+    /// * `response` - The response specification (single or multivariate)
     ///
     /// # Examples
     ///
     /// ```rust
     /// use fiasto::internal::meta_builder::MetaBuilder;
+    /// use fiasto::internal::ast::Response;
     ///
     /// let mut builder = MetaBuilder::new();
-    /// builder.push_response("y");
-    /// // y will have ID 1 and role Response
+    ///
+    /// // Single response
+    /// builder.push_response(&Response::Single("y".to_string()));
+    ///
+    /// // Multivariate response
+    /// builder.push_response(&Response::Multivariate(vec!["y1".to_string(), "y2".to_string()]));
     /// ```
-    pub fn push_response(&mut self, name: &str) {
-        // Ensure response variable gets ID 1
-        if !self.name_to_id.contains_key(name) {
-            self.name_to_id.insert(name.to_string(), 1);
-            self.columns.insert(
-                name.to_string(),
-                VariableInfo {
-                    id: 1,
-                    roles: vec![VariableRole::Response],
-                    transformations: Vec::new(),
-                    interactions: Vec::new(),
-                    random_effects: Vec::new(),
-                    generated_columns: vec![name.to_string()],
-                },
-            );
-            self.next_id = 2; // Start other variables from ID 2
-        } else {
-            self.add_role(name, VariableRole::Response);
+    pub fn push_response(&mut self, response: &Response) {
+        match response {
+            Response::Single(name) => {
+                // Single response variable gets ID 1
+                if !self.name_to_id.contains_key(name) {
+                    self.name_to_id.insert(name.to_string(), 1);
+                    self.columns.insert(
+                        name.to_string(),
+                        VariableInfo {
+                            id: 1,
+                            roles: vec![VariableRole::Response],
+                            transformations: Vec::new(),
+                            interactions: Vec::new(),
+                            random_effects: Vec::new(),
+                            generated_columns: vec![name.to_string()],
+                        },
+                    );
+                    self.next_id = 2; // Start other variables from ID 2
+                } else {
+                    self.add_role(name, VariableRole::Response);
+                }
+            }
+            Response::Multivariate(variables) => {
+                // All multivariate response variables get ID 1
+                for name in variables {
+                    if !self.name_to_id.contains_key(name) {
+                        self.name_to_id.insert(name.to_string(), 1);
+                        self.columns.insert(
+                            name.to_string(),
+                            VariableInfo {
+                                id: 1,
+                                roles: vec![VariableRole::Response],
+                                transformations: Vec::new(),
+                                interactions: Vec::new(),
+                                random_effects: Vec::new(),
+                                generated_columns: vec![name.to_string()],
+                            },
+                        );
+                    } else {
+                        self.add_role(name, VariableRole::Response);
+                    }
+                }
+                self.next_id = 2; // Start other variables from ID 2
+            }
         }
     }
 
@@ -653,9 +685,10 @@ impl MetaBuilder {
     ///
     /// ```rust
     /// use fiasto::internal::meta_builder::MetaBuilder;
+    /// use fiasto::internal::ast::Response;
     ///
     /// let mut builder = MetaBuilder::new();
-    /// builder.push_response("y");
+    /// builder.push_response(&Response::Single("y".to_string()));
     /// builder.push_plain_term("x");
     ///
     /// let metadata = builder.build("y ~ x", true, Some("gaussian".to_string()));
@@ -685,9 +718,9 @@ impl MetaBuilder {
         let mut all_generated_columns_formula_order = std::collections::HashMap::new();
         let mut order_index = 1;
 
-        // Add response variable (always first)
-        if let Some(response_var) = sorted_vars.iter().find(|v| v.id == 1) {
-            if let Some(response_col) = response_var.generated_columns.first() {
+        // Add all response variables (always first, all have id == 1)
+        for response_var in sorted_vars.iter().filter(|v| v.id == 1) {
+            for response_col in &response_var.generated_columns {
                 all_generated_columns_formula_order
                     .insert(order_index.to_string(), response_col.clone());
                 order_index += 1;
@@ -713,6 +746,9 @@ impl MetaBuilder {
             }
         }
 
+        // Count response variables (all variables with ID 1)
+        let response_variable_count = self.columns.values().filter(|v| v.id == 1).count() as u32;
+
         crate::internal::data_structures::FormulaMetaData {
             formula: input.to_string(),
             metadata: FormulaMetadataInfo {
@@ -720,6 +756,7 @@ impl MetaBuilder {
                 is_random_effects_model: self.is_random_effects_model,
                 has_uncorrelated_slopes_and_intercepts: self.has_uncorrelated_slopes_and_intercepts,
                 family,
+                response_variable_count,
             },
             columns: self.columns,
             all_generated_columns,

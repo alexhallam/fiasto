@@ -391,7 +391,8 @@ pub struct VariableInfo {
 ///     has_intercept: true,
 ///     is_random_effects_model: false,
 ///     has_uncorrelated_slopes_and_intercepts: false,
-///     family: Some("gaussian".to_string())
+///     family: Some("gaussian".to_string()),
+///     response_variable_count: 1
 /// };
 ///
 /// // Mixed effects model with uncorrelated effects
@@ -399,7 +400,8 @@ pub struct VariableInfo {
 ///     has_intercept: true,
 ///     is_random_effects_model: true,
 ///     has_uncorrelated_slopes_and_intercepts: true,
-///     family: Some("gaussian".to_string())
+///     family: Some("gaussian".to_string()),
+///     response_variable_count: 1
 /// };
 /// ```
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -415,6 +417,9 @@ pub struct FormulaMetadataInfo {
 
     /// The distribution family for the model (if specified)
     pub family: Option<String>,
+
+    /// Number of response variables (1 for single response, >1 for multivariate)
+    pub response_variable_count: u32,
 }
 
 /// Complete formula metadata structure
@@ -445,7 +450,8 @@ pub struct FormulaMetadataInfo {
 ///         has_intercept: true,
 ///         is_random_effects_model: true,
 ///         has_uncorrelated_slopes_and_intercepts: false,
-///         family: Some("gaussian".to_string())
+///         family: Some("gaussian".to_string()),
+///         response_variable_count: 1
 ///     },
 ///     columns,
 ///     all_generated_columns: vec!["y".to_string(), "intercept".to_string(), "x".to_string(), "group".to_string()],

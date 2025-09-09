@@ -8,7 +8,8 @@
 - **Intercept Column Support**: Added automatic inclusion of `"intercept"` column in `all_generated_columns` when `has_intercept` is true
 - **Formula Order Mapping**: Added new `all_generated_columns_formula_order` field that maps formula order (1, 2, 3...) to column names
 - **Intercept-Only Model Support**: Added support for intercept-only models like `y ~ 1` and no-intercept models like `y ~ 0` with new `Term::Intercept` and `Term::Zero` variants
-- **Tests**: Added 7 new unit tests to verify intercept handling, formula order mapping, and intercept-only model functionality
+- **Multivariate Model Support**: Added support for multivariate response models like `bind(y1, y2) ~ x` with new `Response::Multivariate` variant and `bind()` function parsing
+- **Tests**: Added 11 new unit tests to verify intercept handling, formula order mapping, intercept-only model functionality, and multivariate model support
 
 ### 🔧 Improved
 
@@ -19,6 +20,7 @@
 ### 🐛 Fixed
 
 - **Issue #1**: Fixed intercept-only model parsing by adding support for `y ~ 1` and `y ~ 0` formulas
+- **Issue #3**: Added multivariate model support with `bind()` function for multiple response variables
 - **Issue #4**: Fixed plain terms not receiving proper `Identity` role when appearing alone in formulas
 - **Issue #6**: Fixed missing intercept column in `all_generated_columns` and added formula order mapping
 
@@ -28,14 +30,15 @@
 - **Regression Prevention**: Tests ensure intercept is present when `has_intercept` is true and absent when false
 - **Order Validation**: Tests verify correct column ordering in both `all_generated_columns` and `all_generated_columns_formula_order`
 - **Intercept-Only Models**: Tests verify `y ~ 1` and `y ~ 0` formulas work correctly with proper metadata generation
+- **Multivariate Models**: Tests verify `bind(y1, y2) ~ x` formulas work correctly with multiple response variables
 - **Error Handling**: Tests verify invalid syntax like `y ~ 1 - 1` and `y ~ 0 + 1` fails appropriately
 
 ### 🔄 Internal Changes
 
-- **AST Enhancement**: Added new `Term::Intercept` and `Term::Zero` variants to support intercept-only and no-intercept models
-- **Parser Updates**: Enhanced `parse_term()` to recognize `Token::One` and `Token::Zero` as valid terms
+- **AST Enhancement**: Added new `Term::Intercept`, `Term::Zero` variants and `Response::Multivariate` enum to support intercept-only, no-intercept, and multivariate models
+- **Parser Updates**: Enhanced `parse_term()` to recognize `Token::One` and `Token::Zero` as valid terms, and `parse_response()` to handle `bind()` function calls
 - **Syntax Validation**: Added validation to prevent contradictory syntax like `y ~ 1 - 1` and invalid combinations like `y ~ 0 + 1`
-- **MetaBuilder Enhancement**: Updated `build()` method to handle intercept insertion and formula order mapping
+- **MetaBuilder Enhancement**: Updated `build()` method to handle intercept insertion and formula order mapping, and `push_response()` to handle multivariate responses
 - **Data Structure Updates**: Enhanced `FormulaMetaData` struct with new `all_generated_columns_formula_order` field
 - **Role Management**: Improved role assignment logic in `push_plain_term()` and `add_transformation()` methods
 

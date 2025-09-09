@@ -51,6 +51,7 @@ that can take this JSON and generates design matrices for use in statistical mod
 - **Variable-Centric Output**: Variables are first-class citizens with detailed metadata
 - **Advanced Random Effects**: brms-style syntax with correlation control and grouping options
 - **Intercept-Only Models**: Full support for `y ~ 1` and `y ~ 0` formulas with proper metadata generation
+- **Multivariate Models**: Full support for `bind(y1, y2) ~ x` formulas with multiple response variables
 - **High Performance**: Zero-copy processing and efficient tokenization
 - **Pretty Error Messages**: Colored, contextual error reporting with syntax highlighting
 - **Robust Error Recovery**: Graceful handling of malformed formulas with specific error types
@@ -68,11 +69,12 @@ that can take this JSON and generates design matrices for use in statistical mod
 - **Formula Validation**: Check if formulas are valid against datasets before expensive computation
 - **Cross-Platform Model Specs**: Define models once, implement in multiple statistical frameworks
 - **Intercept-Only Models**: Support for null models like `y ~ 1` and `y ~ 0` for baseline comparisons
+- **Multivariate Models**: Support for multiple response variables like `bind(y1, y2) ~ x` for joint modeling
 
 
 ## Goals
 
-I can't think of every kind of formula that could be pasrsed. I do have a checklist to start with.
+I can't think of every kind of formula that could be parsed. I do have a checklist to start with.
 
 To my knowldege the `brms` formula syntax is the most complex and possibly the most complete.
 
@@ -82,10 +84,11 @@ I also offer a clean_name for each parameter. This will all a materializer to us
 
 Polynomials for example would result in names like `x1_poly_1` or `x1_poly_2` as opposed to `[s]^2`. I keep clean_names in camel case.
 
-### 1. Intercept-only and no-intercept models:
+### 1. Intercept-only, no-intercept, and multivariate models:
 
  `y ~ 1` -> `y ~ 1` (null model with intercept)
  `y ~ 0` -> `y ~ 0` (null model without intercept)
+ `bind(y1, y2) ~ x` -> `bind(y1, y2) ~ x` (multivariate response model)
 
 ### 2. Mixed effects models:
 
@@ -154,7 +157,7 @@ Polynomials for example would result in names like `x1_poly_1` or `x1_poly_2` as
 `y ~ cs(x) + (cs(1) | g)`
 
 ### Specify parameter 'disc'
-`y ~ person + item, disc ~ item)
+`y ~ person + item, disc ~ item)`
 `y ~ person + item`
 `disc ~ item`
 `disc ~ item`
@@ -229,4 +232,3 @@ Polynomials for example would result in names like `x1_poly_1` or `x1_poly_2` as
 `y ~ x + (1 | g), fill = "mean"`
 
 For detailed documentation, see [gr() Function Documentation](docs/gr_function.md).
-# Trigger release workflow

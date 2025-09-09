@@ -283,6 +283,10 @@ pub enum Token {
     #[token("cens")]
     Censored,
 
+    /// Multivariate binding: `bind(y1, y2)`
+    #[token("bind")]
+    Bind,
+
     // Random effects grouping functions
     /// Enhanced grouping: `gr(group, options)`
     #[token("gr")]
