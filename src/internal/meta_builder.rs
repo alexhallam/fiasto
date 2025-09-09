@@ -234,8 +234,17 @@ impl MetaBuilder {
     pub fn add_transformation(&mut self, name: &str, transformation: Transformation) {
         if let Some(var_info) = self.columns.get_mut(name) {
             var_info.transformations.push(transformation.clone());
-            // Update generated columns with the transformation's generated columns
-            var_info.generated_columns = transformation.generates_columns;
+            
+            // If the variable has an Identity role, preserve the original variable name
+            // and add the transformation's generated columns
+            if var_info.roles.contains(&VariableRole::Identity) {
+                let mut new_columns = vec![name.to_string()]; // Keep the original variable name
+                new_columns.extend(transformation.generates_columns);
+                var_info.generated_columns = new_columns;
+            } else {
+                // Update generated columns with the transformation's generated columns
+                var_info.generated_columns = transformation.generates_columns;
+            }
         }
     }
 
@@ -293,15 +302,15 @@ impl MetaBuilder {
         }
     }
 
-    /// Adds a fixed effect variable
+    /// Adds a plain variable term (identity transformation)
     ///
-    /// Adds a simple variable as a fixed effect in the model.
+    /// Adds a simple variable that appears without any transformation.
     /// The variable will be assigned the next available ID and
-    /// given the FixedEffect role.
+    /// given the Identity role to indicate it's used in its raw form.
     ///
     /// # Arguments
     ///
-    /// * `name` - The name of the variable to add as a fixed effect
+    /// * `name` - The name of the variable to add as a plain term
     ///
     /// # Examples
     ///
@@ -310,11 +319,11 @@ impl MetaBuilder {
     ///
     /// let mut builder = MetaBuilder::new();
     /// builder.push_plain_term("x");
-    /// // x will be added as a fixed effect
+    /// // x will be added with Identity role
     /// ```
     pub fn push_plain_term(&mut self, name: &str) {
         self.ensure_variable(name);
-        self.add_role(name, VariableRole::FixedEffect);
+        self.add_role(name, VariableRole::Identity);
     }
 
     /// Adds an interaction term
@@ -396,6 +405,7 @@ impl MetaBuilder {
 
         if let Some(base_col) = base_ident {
             self.ensure_variable(base_col);
+            // Add FixedEffect role for the transformed version
             self.add_role(base_col, VariableRole::FixedEffect);
 
             // Create transformation info
