@@ -8,7 +8,7 @@
 - **Intercept Column Support**: Added automatic inclusion of `"intercept"` column in `all_generated_columns` when `has_intercept` is true
 - **Formula Order Mapping**: Added new `all_generated_columns_formula_order` field that maps formula order (1, 2, 3...) to column names
 - **Intercept-Only Model Support**: Added support for intercept-only models like `y ~ 1` and no-intercept models like `y ~ 0` with new `Term::Intercept` and `Term::Zero` variants
-- **Comprehensive Test Suite**: Added 7 new unit tests to verify intercept handling, formula order mapping, and intercept-only model functionality
+- **Tests**: Added 7 new unit tests to verify intercept handling, formula order mapping, and intercept-only model functionality
 
 ### 🔧 Improved
 
