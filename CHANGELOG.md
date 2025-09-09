@@ -1,5 +1,37 @@
 # Changelog
 
+## [Unreleased]
+
+### ✨ Added
+
+- **Identity Role for Plain Terms**: Added new `Identity` role to `VariableRole` enum for variables that appear as plain terms in formulas (e.g., `x` in `y ~ x`)
+- **Intercept Column Support**: Added automatic inclusion of `"intercept"` column in `all_generated_columns` when `has_intercept` is true
+- **Formula Order Mapping**: Added new `all_generated_columns_formula_order` field that maps formula order (1, 2, 3...) to column names
+- **Comprehensive Test Suite**: Added 4 new unit tests to verify intercept handling and formula order mapping functionality
+
+### 🔧 Improved
+
+- **Variable Role Assignment**: Plain terms now correctly receive `Identity` role instead of `FixedEffect` role
+- **Generated Columns Preservation**: Variables with `Identity` role now preserve their original column name in generated columns list
+- **Intercept Positioning**: Intercept column is automatically inserted at index 1 (after response variable) in `all_generated_columns`
+
+### 🐛 Fixed
+
+- **Issue #4**: Fixed plain terms not receiving proper `Identity` role when appearing alone in formulas
+- **Issue #6**: Fixed missing intercept column in `all_generated_columns` and added formula order mapping
+
+### 🧪 Testing
+
+- **Unit Test Coverage**: Added comprehensive test coverage for intercept and formula order functionality
+- **Regression Prevention**: Tests ensure intercept is present when `has_intercept` is true and absent when false
+- **Order Validation**: Tests verify correct column ordering in both `all_generated_columns` and `all_generated_columns_formula_order`
+
+### 🔄 Internal Changes
+
+- **MetaBuilder Enhancement**: Updated `build()` method to handle intercept insertion and formula order mapping
+- **Data Structure Updates**: Enhanced `FormulaMetaData` struct with new `all_generated_columns_formula_order` field
+- **Role Management**: Improved role assignment logic in `push_plain_term()` and `add_transformation()` methods
+
 ## [0.2.4] - 2025-09-05
 
 ### Added

@@ -448,7 +448,15 @@ pub struct FormulaMetadataInfo {
 ///         family: Some("gaussian".to_string())
 ///     },
 ///     columns,
-///     all_generated_columns: vec!["y".to_string(), "x".to_string(), "group".to_string()]
+///     all_generated_columns: vec!["y".to_string(), "intercept".to_string(), "x".to_string(), "group".to_string()],
+///     all_generated_columns_formula_order: {
+///         let mut map = HashMap::new();
+///         map.insert("1".to_string(), "y".to_string());
+///         map.insert("2".to_string(), "intercept".to_string());
+///         map.insert("3".to_string(), "x".to_string());
+///         map.insert("4".to_string(), "group".to_string());
+///         map
+///     }
 /// };
 /// ```
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -462,8 +470,31 @@ pub struct FormulaMetaData {
     /// Detailed information about each variable
     pub columns: HashMap<String, VariableInfo>,
 
-    /// All generated column names ordered by variable ID
+    /// All generated column names ordered by variable ID, including intercept if present
     pub all_generated_columns: Vec<String>,
+
+    /// Mapping of formula order to column names
+    ///
+    /// This field provides a mapping from formula order (as string keys "1", "2", etc.)
+    /// to the corresponding column names. The order follows the formula structure:
+    /// 1. Response variable
+    /// 2. Intercept (if present)
+    /// 3. Variables in order of appearance in the formula
+    ///
+    /// # Examples
+    ///
+    /// For formula `y ~ x + poly(x, 2) + log(z)`:
+    /// ```json
+    /// {
+    ///   "1": "y",
+    ///   "2": "intercept",
+    ///   "3": "x",
+    ///   "4": "x_poly_1",
+    ///   "5": "x_poly_2",
+    ///   "6": "z_log"
+    /// }
+    /// ```
+    pub all_generated_columns_formula_order: HashMap<String, String>,
 }
 
 // Legacy structures for backward compatibility
