@@ -229,6 +229,13 @@ pub enum Argument {
     /// - `"group_id"` → `Argument::String("group_id")`
     String(String),
 
+    /// A named argument (key=value)
+    ///
+    /// # Examples
+    /// - `ref=treatment` → `Argument::Named("ref", "treatment")`
+    /// - `level=high` → `Argument::Named("level", "high")`
+    Named(String, String),
+
     /// A boolean value
     ///
     /// # Examples

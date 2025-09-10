@@ -112,6 +112,13 @@ pub enum VariableRole {
     /// - `x1_x2` for interaction `x1:x2`
     /// - `x1_x2_x3` for interaction `x1:x2:x3`
     InteractionTerm,
+
+    /// A categorical variable with reference level specification
+    ///
+    /// # Examples
+    /// - `c(treatment, ref=control)` for categorical treatment with control as reference
+    /// - `c(group, ref="group1")` for categorical group with "group1" as reference
+    Categorical,
 }
 
 /// A transformation applied to a variable

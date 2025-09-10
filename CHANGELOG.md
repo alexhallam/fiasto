@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.2.6] - 2024-12-19
+## [0.2.7] - 2024-12-19
 
 ### ✨ Added
 
@@ -9,6 +9,10 @@
 - **Comprehensive Interaction Metadata**: Each variable now includes detailed interaction information showing all interactions it participates in
 - **Canonical Expansion**: Multi-way interactions now generate all possible combinations (2-way, 3-way, etc.) as per R/Wilkinson notation standards
 - **Test Example**: Added `test_multiway_interaction.rs` example demonstrating 2-way, 3-way, and 4-way interactions
+- **Categorical Function Support**: Added `c()` function for categorical variables with reference level specification
+- **Named Arguments**: Added support for named arguments in function calls (e.g., `ref=treatment`)
+- **Categorical Role**: Added new `Categorical` role to `VariableRole` enum for categorical variables
+- **Test Example**: Added `test_categorical_function.rs` example demonstrating categorical function usage
 
 ### 🔧 Improved
 

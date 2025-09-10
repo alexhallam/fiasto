@@ -211,6 +211,10 @@ pub enum Token {
     #[token("factor")]
     Factor,
 
+    /// Categorical variable with reference level: `c(x, ref=level)`
+    #[token("c", priority = 3)]
+    C,
+
     /// Scaling transformation: `scale(x)`
     #[token("scale")]
     Scale,

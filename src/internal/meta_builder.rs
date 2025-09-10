@@ -486,6 +486,12 @@ impl MetaBuilder {
 
     /// Adds a function/transformation term
     pub fn push_function_term(&mut self, fname: &str, args: &[Argument]) {
+        // Special handling for categorical functions
+        if fname == "c" || fname == "factor" {
+            self.push_categorical_term_with_name(fname, args);
+            return;
+        }
+
         let base_ident = args.iter().find_map(|a| match a {
             Argument::Ident(s) => Some(s.as_str()),
             _ => None,
@@ -507,6 +513,47 @@ impl MetaBuilder {
             };
 
             self.add_transformation(base_col, transformation);
+        }
+    }
+
+    /// Handles categorical variables with reference level specification
+    fn push_categorical_term_with_name(&mut self, fname: &str, args: &[Argument]) {
+        // Extract the variable name (first argument)
+        let var_name = args.iter().find_map(|a| match a {
+            Argument::Ident(s) => Some(s.as_str()),
+            _ => None,
+        });
+
+        if let Some(var_name) = var_name {
+            self.ensure_variable(var_name);
+
+            // Add both Categorical and FixedEffect roles
+            self.add_role(var_name, VariableRole::Categorical);
+            self.add_role(var_name, VariableRole::FixedEffect);
+
+            // Extract reference level from named arguments
+            let ref_level = args.iter().find_map(|a| match a {
+                Argument::Named(key, value) if key == "ref" => Some(value.clone()),
+                _ => None,
+            });
+
+            // Create transformation info with reference level
+            let mut parameters = self.extract_function_parameters(fname, args);
+            if let Some(ref_level) = ref_level {
+                if let serde_json::Value::Object(ref mut params_map) = parameters {
+                    params_map.insert("ref".to_string(), serde_json::Value::String(ref_level));
+                }
+            }
+
+            let generates_columns = self.generate_transformation_columns(fname, args);
+
+            let transformation = Transformation {
+                function: fname.to_string(),
+                parameters,
+                generates_columns,
+            };
+
+            self.add_transformation(var_name, transformation);
         }
     }
 
@@ -674,6 +721,10 @@ impl MetaBuilder {
             "log" => {
                 // No additional parameters for log
             }
+            "factor" => {
+                // Handle factor function parameters (same as c function)
+                // Parameters are handled by the generic case below
+            }
             _ => {
                 // Generic parameter handling
                 for (i, arg) in args.iter().enumerate() {
@@ -683,6 +734,11 @@ impl MetaBuilder {
                         Argument::String(s) => serde_json::Value::String(s.clone()),
                         Argument::Boolean(b) => serde_json::Value::Bool(*b),
                         Argument::Ident(s) => serde_json::Value::String(s.clone()),
+                        Argument::Named(key, value) => {
+                            // For named arguments, use the key directly
+                            params.insert(key.clone(), serde_json::Value::String(value.clone()));
+                            continue; // Skip the generic arg_N handling
+                        }
                     };
                     params.insert(key, value);
                 }
@@ -713,6 +769,11 @@ impl MetaBuilder {
                 }
             }
             "log" => vec![format!("{}_log", base_name)],
+            "c" | "factor" => {
+                // For categorical variables, we generate dummy variables for each level
+                // The reference level is excluded (handled by the ref parameter)
+                vec![format!("{}_categorical", base_name)]
+            }
             _ => vec![format!("{}_{}", base_name, fname)],
         }
     }
