@@ -77,7 +77,41 @@ pub fn parse_arg<'a>(
         match tok {
             Token::ColumnName => {
                 crate::internal::next::next(tokens, pos);
-                Ok(Argument::Ident(slice.to_string()))
+
+                // Check if this is a named argument (key=value)
+                if crate::internal::peek::peek(tokens, *pos)
+                    .map(|(t, _)| matches!(t, Token::Equal))
+                    .unwrap_or(false)
+                {
+                    let key = slice.to_string();
+                    crate::internal::next::next(tokens, pos); // Skip the equals sign
+
+                    // Parse the value
+                    if let Some((value_tok, value_slice)) =
+                        crate::internal::peek::peek(tokens, *pos).cloned()
+                    {
+                        match value_tok {
+                            Token::ColumnName => {
+                                crate::internal::next::next(tokens, pos);
+                                Ok(Argument::Named(key, value_slice.to_string()))
+                            }
+                            Token::StringLiteral => {
+                                crate::internal::next::next(tokens, pos);
+                                // Remove quotes from string literal
+                                let value = value_slice.trim_matches('"').to_string();
+                                Ok(Argument::Named(key, value))
+                            }
+                            _ => Err(ParseError::Unexpected {
+                                expected: "column name or string literal",
+                                found: Some(value_tok),
+                            }),
+                        }
+                    } else {
+                        Err(ParseError::Eoi)
+                    }
+                } else {
+                    Ok(Argument::Ident(slice.to_string()))
+                }
             }
             Token::Integer => {
                 crate::internal::next::next(tokens, pos);
@@ -86,6 +120,12 @@ pub fn parse_arg<'a>(
             Token::One => {
                 crate::internal::next::next(tokens, pos);
                 Ok(Argument::Integer(1))
+            }
+            Token::StringLiteral => {
+                crate::internal::next::next(tokens, pos);
+                // Remove quotes from string literal
+                let value = slice.trim_matches('"').to_string();
+                Ok(Argument::String(value))
             }
             _ => Err(ParseError::Unexpected {
                 expected: "argument",

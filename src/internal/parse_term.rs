@@ -119,6 +119,7 @@ pub fn parse_term<'a>(tokens: &'a [(Token, &'a str)], pos: &mut usize) -> Result
                         | Token::Log
                         | Token::Offset
                         | Token::Factor
+                        | Token::C
                         | Token::Scale
                         | Token::Standardize
                         | Token::Center
@@ -153,6 +154,7 @@ pub fn parse_term<'a>(tokens: &'a [(Token, &'a str)], pos: &mut usize) -> Result
                 Token::Log => "log".to_string(),
                 Token::Offset => "offset".to_string(),
                 Token::Factor => "factor".to_string(),
+                Token::C => "c".to_string(),
                 Token::Scale => "scale".to_string(),
                 Token::Standardize => "standardize".to_string(),
                 Token::Center => "center".to_string(),
@@ -194,29 +196,69 @@ pub fn parse_term<'a>(tokens: &'a [(Token, &'a str)], pos: &mut usize) -> Result
                 }
                 Token::Poly => return Err(ParseError::Syntax("expected '(' after 'poly'".into())),
                 Token::Log => return Err(ParseError::Syntax("expected '(' after 'log'".into())),
-                Token::Offset => return Err(ParseError::Syntax("expected '(' after 'offset'".into())),
-                Token::Factor => return Err(ParseError::Syntax("expected '(' after 'factor'".into())),
-                Token::Scale => return Err(ParseError::Syntax("expected '(' after 'scale'".into())),
-                Token::Standardize => return Err(ParseError::Syntax("expected '(' after 'standardize'".into())),
-                Token::Center => return Err(ParseError::Syntax("expected '(' after 'center'".into())),
-                Token::BSplines => return Err(ParseError::Syntax("expected '(' after 'bs'".into())),
-                Token::GaussianProcess => return Err(ParseError::Syntax("expected '(' after 'gp'".into())),
-                Token::Monotonic => return Err(ParseError::Syntax("expected '(' after 'mono'".into())),
-                Token::MeasurementError => return Err(ParseError::Syntax("expected '(' after 'me'".into())),
-                Token::MissingValues => return Err(ParseError::Syntax("expected '(' after 'mi'".into())),
-                Token::ForwardFill => return Err(ParseError::Syntax("expected '(' after 'forward_fill'".into())),
-                Token::BackwardFill => return Err(ParseError::Syntax("expected '(' after 'backward_fill'".into())),
+                Token::Offset => {
+                    return Err(ParseError::Syntax("expected '(' after 'offset'".into()))
+                }
+                Token::Factor => {
+                    return Err(ParseError::Syntax("expected '(' after 'factor'".into()))
+                }
+                Token::Scale => {
+                    return Err(ParseError::Syntax("expected '(' after 'scale'".into()))
+                }
+                Token::Standardize => {
+                    return Err(ParseError::Syntax(
+                        "expected '(' after 'standardize'".into(),
+                    ))
+                }
+                Token::Center => {
+                    return Err(ParseError::Syntax("expected '(' after 'center'".into()))
+                }
+                Token::BSplines => {
+                    return Err(ParseError::Syntax("expected '(' after 'bs'".into()))
+                }
+                Token::GaussianProcess => {
+                    return Err(ParseError::Syntax("expected '(' after 'gp'".into()))
+                }
+                Token::Monotonic => {
+                    return Err(ParseError::Syntax("expected '(' after 'mono'".into()))
+                }
+                Token::MeasurementError => {
+                    return Err(ParseError::Syntax("expected '(' after 'me'".into()))
+                }
+                Token::MissingValues => {
+                    return Err(ParseError::Syntax("expected '(' after 'mi'".into()))
+                }
+                Token::ForwardFill => {
+                    return Err(ParseError::Syntax(
+                        "expected '(' after 'forward_fill'".into(),
+                    ))
+                }
+                Token::BackwardFill => {
+                    return Err(ParseError::Syntax(
+                        "expected '(' after 'backward_fill'".into(),
+                    ))
+                }
                 Token::Diff => return Err(ParseError::Syntax("expected '(' after 'diff'".into())),
                 Token::Lag => return Err(ParseError::Syntax("expected '(' after 'lag'".into())),
                 Token::Lead => return Err(ParseError::Syntax("expected '(' after 'lead'".into())),
-                Token::Trunc => return Err(ParseError::Syntax("expected '(' after 'trunc'".into())),
-                Token::Weights => return Err(ParseError::Syntax("expected '(' after 'weights'".into())),
-                Token::Trials => return Err(ParseError::Syntax("expected '(' after 'trials'".into())),
-                Token::Censored => return Err(ParseError::Syntax("expected '(' after 'cens'".into())),
-                _ => return Err(ParseError::Unexpected {
-                    expected: "term",
-                    found: Some(tok),
-                }),
+                Token::Trunc => {
+                    return Err(ParseError::Syntax("expected '(' after 'trunc'".into()))
+                }
+                Token::Weights => {
+                    return Err(ParseError::Syntax("expected '(' after 'weights'".into()))
+                }
+                Token::Trials => {
+                    return Err(ParseError::Syntax("expected '(' after 'trials'".into()))
+                }
+                Token::Censored => {
+                    return Err(ParseError::Syntax("expected '(' after 'cens'".into()))
+                }
+                _ => {
+                    return Err(ParseError::Unexpected {
+                        expected: "term",
+                        found: Some(tok),
+                    })
+                }
             }
         }
     };
@@ -224,7 +266,9 @@ pub fn parse_term<'a>(tokens: &'a [(Token, &'a str)], pos: &mut usize) -> Result
     // Now check for multiplication (interaction) tokens and build up the interaction chain
     let mut term = atomic_term;
     loop {
-        if crate::internal::matches::matches(tokens, pos, |t| matches!(t, Token::InteractionAndEffect | Token::InteractionOnly)) {
+        if crate::internal::matches::matches(tokens, pos, |t| {
+            matches!(t, Token::InteractionAndEffect | Token::InteractionOnly)
+        }) {
             // `matches` already consumed the interaction token, so parse the right-hand term now
             let right = parse_term(tokens, pos)?;
             term = Term::Interaction {
