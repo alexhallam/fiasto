@@ -105,6 +105,13 @@ pub enum VariableRole {
     /// - `x1` in `y ~ x1 + poly(x1, 2)` (x1 appears both as identity and in poly)
     /// - `x` in `y ~ x + log(x)` (x appears both as identity and in log)
     Identity,
+
+    /// A variable that represents an interaction term
+    ///
+    /// # Examples
+    /// - `x1_x2` for interaction `x1:x2`
+    /// - `x1_x2_x3` for interaction `x1:x2:x3`
+    InteractionTerm,
 }
 
 /// A transformation applied to a variable

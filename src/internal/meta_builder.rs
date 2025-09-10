@@ -358,75 +358,129 @@ impl MetaBuilder {
         self.add_role(name, VariableRole::Identity);
     }
 
-    /// Adds an interaction term
+    /// Extracts all variable names from a potentially nested interaction term
+    fn extract_all_variables(term: &crate::internal::ast::Term) -> Vec<String> {
+        match term {
+            crate::internal::ast::Term::Column(name) => vec![name.clone()],
+            crate::internal::ast::Term::Function { args, .. } => {
+                // For functions, extract the first argument if it's an identifier
+                args.iter()
+                    .find_map(|arg| match arg {
+                        Argument::Ident(s) => Some(s.clone()),
+                        _ => None,
+                    })
+                    .into_iter()
+                    .collect()
+            }
+            crate::internal::ast::Term::Interaction { left, right } => {
+                let mut vars = Self::extract_all_variables(left);
+                vars.extend(Self::extract_all_variables(right));
+                vars
+            }
+            _ => vec![],
+        }
+    }
+
+    /// Generates all possible interaction combinations from a list of variables
+    fn generate_interaction_combinations(variables: &[String]) -> Vec<Vec<String>> {
+        let mut combinations = Vec::new();
+        let n = variables.len();
+
+        // Generate all combinations from order 2 up to n
+        for order in 2..=n {
+            combinations.extend(Self::combinations(variables, order));
+        }
+
+        combinations
+    }
+
+    /// Helper function to generate combinations of a given size
+    fn combinations(variables: &[String], k: usize) -> Vec<Vec<String>> {
+        if k == 0 {
+            return vec![vec![]];
+        }
+        if variables.is_empty() {
+            return vec![];
+        }
+
+        let mut result = Vec::new();
+        let first = &variables[0];
+        let rest = &variables[1..];
+
+        // Include first element
+        for mut combo in Self::combinations(rest, k - 1) {
+            combo.insert(0, first.clone());
+            result.push(combo);
+        }
+
+        // Exclude first element
+        result.extend(Self::combinations(rest, k));
+
+        result
+    }
+
+    /// Creates an interaction variable name from a list of variables
+    fn create_interaction_name(variables: &[String]) -> String {
+        variables.join("_")
+    }
+
+    /// Adds an interaction term (completely rewritten for multi-way interactions)
     pub fn push_interaction(
         &mut self,
         left: &crate::internal::ast::Term,
         right: &crate::internal::ast::Term,
     ) {
-        // Extract variable names from the interaction terms
-        let left_name = Self::extract_variable_name(left);
-        let right_name = Self::extract_variable_name(right);
+        // Extract all variables from the interaction
+        let mut all_variables = Self::extract_all_variables(left);
+        all_variables.extend(Self::extract_all_variables(right));
 
-        if let (Some(left_var), Some(right_var)) = (left_name, right_name) {
-            // Ensure both variables exist
-            self.ensure_variable(&left_var);
-            self.ensure_variable(&right_var);
-
-            // Add fixed effect role to both variables
-            self.add_role(&left_var, VariableRole::FixedEffect);
-            self.add_role(&right_var, VariableRole::FixedEffect);
-
-            // Generate interaction column name
-            let interaction_name = format!("{}_z", left_var);
-
-            // Add interaction info to both variables
-            let interaction = Interaction {
-                with: vec![right_var.clone()],
-                order: 2,
-                context: "fixed_effects".to_string(),
-                grouping_variable: None,
-            };
-            self.add_interaction(&left_var, interaction);
-
-            let interaction = Interaction {
-                with: vec![left_var.clone()],
-                order: 2,
-                context: "fixed_effects".to_string(),
-                grouping_variable: None,
-            };
-            self.add_interaction(&right_var, interaction);
-
-            // Update generated columns for the left variable to include the interaction
-            if let Some(var_info) = self.columns.get_mut(&left_var) {
-                if !var_info.generated_columns.contains(&interaction_name) {
-                    var_info.generated_columns.push(interaction_name);
-                }
+        // Remove duplicates while preserving order
+        let mut unique_variables = Vec::new();
+        for var in all_variables {
+            if !unique_variables.contains(&var) {
+                unique_variables.push(var);
             }
         }
-    }
 
-    /// Extracts variable name from a term
-    fn extract_variable_name(term: &crate::internal::ast::Term) -> Option<String> {
-        match term {
-            crate::internal::ast::Term::Column(name) => Some(name.clone()),
-            crate::internal::ast::Term::Function { name: _name, args } => {
-                // For functions, extract the first argument if it's an identifier
-                args.iter().find_map(|arg| match arg {
-                    Argument::Ident(s) => Some(s.clone()),
-                    _ => None,
-                })
+        if unique_variables.is_empty() {
+            return;
+        }
+
+        // Ensure all main effect variables exist and have FixedEffect role
+        for var in &unique_variables {
+            self.ensure_variable(var);
+            self.add_role(var, VariableRole::FixedEffect);
+        }
+
+        // Generate all interaction combinations (2-way, 3-way, etc.)
+        let interaction_combinations = Self::generate_interaction_combinations(&unique_variables);
+
+        for combo in interaction_combinations {
+            let interaction_name = Self::create_interaction_name(&combo);
+            let order = combo.len() as u32;
+
+            // Create the interaction variable
+            self.ensure_variable(&interaction_name);
+            self.add_role(&interaction_name, VariableRole::InteractionTerm);
+            self.add_role(&interaction_name, VariableRole::FixedEffect);
+
+            // Add interaction metadata to each participating variable
+            for (i, var) in combo.iter().enumerate() {
+                let other_vars: Vec<String> = combo
+                    .iter()
+                    .enumerate()
+                    .filter(|(j, _)| *j != i)
+                    .map(|(_, v)| v.clone())
+                    .collect();
+
+                let interaction = Interaction {
+                    with: other_vars,
+                    order,
+                    context: "fixed_effects".to_string(),
+                    grouping_variable: None,
+                };
+                self.add_interaction(var, interaction);
             }
-            crate::internal::ast::Term::Interaction {
-                left,
-                right: _right,
-            } => {
-                // For nested interactions, we'll use the left side for now
-                Self::extract_variable_name(left)
-            }
-            crate::internal::ast::Term::RandomEffect(_) => None,
-            crate::internal::ast::Term::Intercept => None, // Intercept terms don't have variable names
-            crate::internal::ast::Term::Zero => None,      // Zero terms don't have variable names
         }
     }
 

@@ -52,7 +52,6 @@ that can take this JSON and generates design matrices for use in statistical mod
 - **Advanced Random Effects**: brms-style syntax with correlation control and grouping options
 - **Intercept-Only Models**: Full support for `y ~ 1` and `y ~ 0` formulas with proper metadata generation
 - **Multivariate Models**: Full support for `bind(y1, y2) ~ x` formulas with multiple response variables
-- **High Performance**: Zero-copy processing and efficient tokenization
 - **Pretty Error Messages**: Colored, contextual error reporting with syntax highlighting
 - **Robust Error Recovery**: Graceful handling of malformed formulas with specific error types
 - **Language Agnostic Output**: JSON format for easy integration with various programming languages

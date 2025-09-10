@@ -1,5 +1,34 @@
 # Changelog
 
+## [0.2.6] - 2024-12-19
+
+### ✨ Added
+
+- **Multi-way Interaction Support**: Complete implementation of multi-way interactions (e.g., `x1*x2*x3`) with canonical expansion
+- **InteractionTerm Role**: Added new `InteractionTerm` role to `VariableRole` enum for interaction variables
+- **Comprehensive Interaction Metadata**: Each variable now includes detailed interaction information showing all interactions it participates in
+- **Canonical Expansion**: Multi-way interactions now generate all possible combinations (2-way, 3-way, etc.) as per R/Wilkinson notation standards
+- **Test Example**: Added `test_multiway_interaction.rs` example demonstrating 2-way, 3-way, and 4-way interactions
+
+### 🔧 Improved
+
+- **Interaction Parsing**: Completely rewritten `push_interaction` method to handle nested interaction structures
+- **Variable Extraction**: New `extract_all_variables` method recursively extracts all variables from nested interactions
+- **Combination Generation**: New helper methods to generate all possible interaction combinations
+- **Interaction Naming**: Interaction variables now use underscore-separated naming (e.g., `x1_x2_x3`)
+
+### 🐛 Fixed
+
+- **Multi-way Interaction Bug**: Fixed issue where `x1*x2*x3` was only generating 2-way interactions instead of the complete canonical expansion
+- **Missing Higher-order Interactions**: Resolved problem where 3-way and higher-order interactions were not being generated
+
+### 📝 Technical Details
+
+- **Canonical Expansion**: For `x1*x2*x3`, now generates: `[x1, x2, x3, x1_x2, x1_x3, x2_x3, x1_x2_x3]`
+- **Backward Compatibility**: Existing 2-way interactions continue to work as before
+- **Role Assignment**: Interaction variables receive both `InteractionTerm` and `FixedEffect` roles
+- **Metadata Structure**: Each variable includes comprehensive interaction metadata with order, context, and participating variables
+
 ## [0.2.5] - 2024-12-19
 
 ### ✨ Added
