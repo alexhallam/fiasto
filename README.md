@@ -37,7 +37,96 @@ Note: Technically an AST is not returned. A simplified/structured intermediate r
 1. Make a Rust sandbox `cargo new try_fiasto`
 2. cd `try_fiasto`
 3. `cargo add fiasto`
-4. try an example formula
+4. `cargo add serde_json`
+5. try an example formula
+6. cargo run
+
+## Usage
+
+```rs
+use fiasto::parse_formula;
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Test with a simpler formula
+    let simple_input = "y ~ x + z";
+    println!("Testing with simpler formula:");
+    println!("Input: {}", simple_input);
+    println!();
+
+    let simple_result = parse_formula(simple_input)?;
+    println!("FORMULA METADATA (as JSON):");
+    println!("{}", serde_json::to_string_pretty(&simple_result)?);
+
+    Ok(())
+}
+```
+
+```json
+Testing with simpler formula:
+Input: y ~ x + z
+
+FORMULA METADATA (as JSON):
+{
+  "all_generated_columns": [
+    "y",
+    "intercept",
+    "x",
+    "z"
+  ],
+  "all_generated_columns_formula_order": {
+    "1": "y",
+    "2": "intercept",
+    "3": "x",
+    "4": "z"
+  },
+  "columns": {
+    "x": {
+      "generated_columns": [
+        "x"
+      ],
+      "id": 2,
+      "interactions": [],
+      "random_effects": [],
+      "roles": [
+        "Identity"
+      ],
+      "transformations": []
+    },
+    "y": {
+      "generated_columns": [
+        "y"
+      ],
+      "id": 1,
+      "interactions": [],
+      "random_effects": [],
+      "roles": [
+        "Response"
+      ],
+      "transformations": []
+    },
+    "z": {
+      "generated_columns": [
+        "z"
+      ],
+      "id": 3,
+      "interactions": [],
+      "random_effects": [],
+      "roles": [
+        "Identity"
+      ],
+      "transformations": []
+    }
+  },
+  "formula": "y ~ x + z",
+  "metadata": {
+    "family": null,
+    "has_intercept": true,
+    "has_uncorrelated_slopes_and_intercepts": false,
+    "is_random_effects_model": false,
+    "response_variable_count": 1
+  }
+}
+```
 
 
 
