@@ -23,11 +23,12 @@ A Language-Agnostic modern Wilkinson's formula parser and lexer.
 
 This library is in test and actively changing.
 
-## Motivation
+## Motivation - Decouple the parsing and materialization
 
-Formula parsing and materialization is normally done in a single library. 
+Formula **parsing** and **materialization** (making a model matrix from a formula) is normally done in a single library. 
 Python, for example, has `patsy`/`formulaic`/`formulae` which all do parsing & materialization.
 R's `model.matrix` also handles formula parsing and design matrix creation.
+
 There is nothing wrong with this coupling. I wanted to try decoupling the parsing and materialization.
 I thought this would allow a focused library that could be used in multiple languages or dataframe libraries.
 This package has a clear path, to parse and/or lex formulas and return structured JSON metadata.
@@ -155,18 +156,13 @@ that can take this JSON and generates design matrices for use in statistical mod
 - **Comprehensive Documentation**: Detailed usage examples and grammar rules
 - **Comprehensive Metadata**: Variable roles, transformations, interactions, and relationships
 - **Automatic Naming For Generated Columns**: Consistent, descriptive names for transformed and interaction terms
-- **Dual API**: Both parsing and lexing functions for flexibility
 - **Efficient tokenization**: using one of the fastest lexer generators for Rust ([logos](https://docs.rs/logos/0.15.1/logos/index.html) crate)
 - **Fast pattern matching**: using match statements and enum-based token handling. Rust match statements are zero-cost abstractions.
 - **Minimal string copying**: with extensive use of string slices (`&str`) where possible
 
 ## Use Cases:
 
-- **Formula Validation**: Check if formulas are valid against datasets before expensive computation
-- **Cross-Platform Model Specs**: Define models once, implement in multiple statistical frameworks
-- **Intercept-Only Models**: Support for null models like `y ~ 1` and `y ~ 0` for baseline comparisons
-- **Multivariate Models**: Support for multiple response variables like `bind(y1, y2) ~ x` for joint modeling
-
+- **Cross-Platform Model Specs**: Define models once, implement in multiple frameworks
 
 ## Goals
 
