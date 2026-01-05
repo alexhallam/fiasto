@@ -33,6 +33,14 @@ I thought this would allow a focused library that could be used in multiple lang
 This package has a clear path, to parse and/or lex formulas and return structured JSON metadata.
 Note: Technically an AST is not returned. A simplified/structured intermediate representation (IR) in the form of json is returned. This json IR ought to be easy for many language bindings to use.
 
+## Getting Started
+1. Make a Rust sandbox `cargo new try_fiasto`
+2. cd `try_fiasto`
+3. `cargo add fiasto`
+4. try an example formula
+
+
+
 ## 🎯 Simple API
 The library exposes a clean, focused API:
 - `parse_formula()` - Takes a Wilkinson's formula string and returns structured JSON metadata
